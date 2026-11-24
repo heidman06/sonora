@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Résout les titres en attente (Spotify → YouTube) par petits lots
+// Resolve pending tracks (Spotify -> YouTube) in small batches
 import { ouvrirBase, resoudre } from './musique.mjs';
 import { dureesManquantes } from './durees.mjs';
 
@@ -7,7 +7,7 @@ const db = ouvrirBase();
 const LOT = Number(process.argv[2] || 30);
 const CONC = 3;
 
-// Complète les durées manquantes (CarPlay + app), 120 par passage
+// Fill missing durations (CarPlay + app), 120 per run
 let dureesOk = 0;
 try {
   const ids = db.prepare("SELECT video_id FROM (" +

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Import Spotify CSV (export "My Spotify Library") → pending (résolution YouTube en fond)
+// Spotify CSV import ("My Spotify Library" export) -> pending (background YouTube resolution)
 import { ouvrirBase } from './musique.mjs';
 import { readFileSync } from 'node:fs';
 

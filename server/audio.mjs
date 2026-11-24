@@ -1,5 +1,5 @@
-// Sonora — serveur audio autonome : yt-dlp + cache m4a + Range 206
-// Extrait de dashboard/server.mjs, configurable par variables d'environnement.
+// Sonora - standalone audio server: yt-dlp + m4a cache + Range 206
+// Extracted from dashboard/server.mjs, configurable via environment variables.
 import {
   createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync,
   statSync, unlinkSync, writeFileSync, openSync, readSync, closeSync, renameSync,
@@ -149,7 +149,7 @@ function servirFichier(req, res, fichier) {
   createReadStream(fichier).on('error', () => { try { res.destroy(); } catch (e) {} }).pipe(res);
 }
 
-// Retourne true si la requête a été traitée.
+// Returns true if the request was handled.
 export async function handleAudio(req, res, path) {
   if (!path.startsWith('/musique/dl/')) return false;
   const id = path.slice('/musique/dl/'.length).split('/')[0];
@@ -167,7 +167,7 @@ export async function handleAudio(req, res, path) {
   }
   if (fichiers.length) { servirFichier(req, res, join(dossier, fichiers[0])); return true; }
   if (req.method === 'HEAD') {
-    // préchauffage silencieux
+    // silent prefetch
     const dest = join(dossier, id + '.m4a');
     const proc = spawn(config.ytdlp, ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '-o', dest + '.part', 'https://www.youtube.com/watch?v=' + id]), { stdio: 'ignore', detached: true });
     proc.on('close', () => {
@@ -187,7 +187,7 @@ export async function handleAudio(req, res, path) {
     return true;
   }
 
-  // attente d'un téléchargement déjà en cours
+  // wait for an in-progress download
   const attente = telechargementsEnCours.get(id);
   if (attente) {
     await Promise.race([attente, new Promise((r) => setTimeout(r, 90000))]);
@@ -195,7 +195,7 @@ export async function handleAudio(req, res, path) {
     if (fichiers.length) { servirFichier(req, res, join(dossier, fichiers[0])); return true; }
   }
 
-  // streaming progressif : on relaie les octets pendant le téléchargement
+  // progressive streaming: forward bytes while downloading
   const tmp = join(dossier, id + '.m4a.part');
   const args = ['--cookies', config.cookies, '--js-runtimes', 'node:' + config.nodeBin, '--remote-components', config.ejs, '-f', '140/bestaudio[ext=m4a]', '--no-playlist'];
   const proc = spawn(config.ytdlp, args.concat(['-o', '-', 'https://www.youtube.com/watch?v=' + id]), { stdio: ['ignore', 'pipe', 'ignore'] });

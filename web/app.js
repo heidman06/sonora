@@ -1,4 +1,4 @@
-/* Sonora — interface complète : routes, i18n, favoris, files, artistes. */
+/* Sonora - full interface: routes, i18n, favorites, queues, artists. */
 'use strict';
 
 var X = window.Sonora;
@@ -100,7 +100,7 @@ function translateSoon() {
 }
 var observer = new MutationObserver(function () { translateSoon(); });
 
-/* ---------- accueil ---------- */
+/* ---------- home ---------- */
 var MOODS = [
   { q: 'phonk', fr: 'Phonk', es: 'Phonk' }, { q: 'chill lofi', fr: 'Chill', es: 'Relax' },
   { q: 'rap français', fr: 'Rap FR', es: 'Rap FR' }, { q: 'afrobeats 2026', fr: 'Afrobeats', es: 'Afrobeats' },
@@ -231,7 +231,7 @@ function loadForYou() {
   row.innerHTML = '';
 }
 
-/* ---------- recherche ---------- */
+/* ---------- search ---------- */
 var FILTERS = [
   { k: 'music_songs', fr: 'Titres', es: 'Canciones' },
   { k: 'music_videos', fr: 'Vidéos', es: 'Vídeos' },
@@ -329,7 +329,7 @@ function renderTracks(box, items) {
   }).join('');
 }
 
-/* ---------- bibliothèque ---------- */
+/* ---------- library ---------- */
 function langRowHtml() {
   return '<div class="setting-row"><b>' + L('Langue', 'Idioma') + '</b><div class="seg-lang"><button data-lang="fr" class="' + (S.lang === 'fr' ? 'on' : '') + '">FR</button><button data-lang="es" class="' + (S.lang === 'es' ? 'on' : '') + '">ES</button></div></div>';
 }
@@ -479,7 +479,7 @@ function viewPlaylist(id) {
   }).catch(function () { view('<div class="empty">' + L('Impossible de charger cette playlist.', 'No se puede cargar esta lista.') + '</div>'); });
 }
 
-/* ---------- artiste ---------- */
+/* ---------- artist ---------- */
 function viewArtist(id) {
   if (!id) { location.hash = '#/library'; return; }
   headings('<button class="icon-btn" id="back" style="margin-bottom:14px" aria-label="Retour">' + ico('back', 18) + '</button>');
@@ -523,7 +523,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('#btn-fav')) { if (window.curTrackForFav) X.toggleFav(window.curTrackForFav); return; }
 });
 function paintFavBtn() {
-  var c = X.S; // current track exposes via engine? use window
+  var c = X.S; // current track exposed via engine? use window
 }
 window.addEventListener('hashchange', route);
 
@@ -625,7 +625,7 @@ function boot() {
   }
   $$('.tab-ico').forEach(function (s) { s.innerHTML = ico(s.getAttribute('data-ico'), 21); });
   initTheme();
-  try { initPlayerUi(); } catch (e) { /* ancienne version en cache : on continue */ }
+  try { initPlayerUi(); } catch (e) { /* old cached version: continue */ }
   if ($('#lang-btn')) $('#lang-btn').textContent = S.lang === 'fr' ? 'ES' : 'FR';
   if ($('#lang-btn')) $('#lang-btn').addEventListener('click', function () { setLang(S.lang === 'fr' ? 'es' : 'fr'); });
   X.restoreQueue();

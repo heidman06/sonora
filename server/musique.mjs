@@ -1,5 +1,5 @@
 // ============================================================
-// musique.mjs — base musique multi-comptes (playlists, likes, historique, recos)
+// musique.mjs - multi-account music database (playlists, likes, history, recos)
 // ============================================================
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
@@ -626,5 +626,5 @@ export function handleMusique(req, res, path, url) {
   return true;
 }
 
-// Export réservé aux tests unitaires (fonctions pures).
+// Export reserved for unit tests (pure functions).
 export const internals = { melanger, uniques, FILTRE_MIXTE, RECOS_VERSION };

@@ -1,8 +1,8 @@
 'use strict';
-/* Couche minimale : coquille fixe, barres, logo, langue, traductions. Aucune retouche du lecteur. */
+/* Minimal layer: fixed shell, bars, logo, language, translations. No player changes. */
 (function () {
   var CSS = [
-    /* --- coquille : seul le contenu défile, barres fixes --- */
+    /* --- shell: only content scrolls, fixed bars --- */
     'html,body{height:100%;width:100%;overflow:hidden;position:fixed;inset:0}',
     '#app{height:100dvh;min-height:0!important;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;',
       'overscroll-behavior:contain;padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))!important}',
@@ -16,20 +16,20 @@
     '.top-row{display:flex!important;align-items:center!important;gap:8px!important;width:100%!important}',
     '.top-row .brand{margin-right:auto!important;min-width:0!important}',
 
-    /* --- barres détachées : fixed = viewport --- */
+    /* --- detached bars: fixed = viewport --- */
     'body>.tabs{position:fixed!important;left:50%!important;right:auto!important;',
       'bottom:calc(4px + env(safe-area-inset-bottom,0px))!important;transform:translateX(-50%)!important;',
       'z-index:90!important;display:flex!important;opacity:1!important;visibility:visible!important}',
     'body>.mini{position:fixed!important;left:14px!important;right:14px!important;margin:0 auto!important;',
       'bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;z-index:85!important}',
 
-    /* --- feuilles : opaques et bien empilées --- */
+    /* --- sheets: opaque and properly stacked --- */
     '.sheet{background:#0b0b10!important;z-index:120!important}',
     'body>.tabs{z-index:90!important}',
     '#queue{z-index:140!important}',
     '#addsheet{z-index:150!important}',
 
-    /* --- logo + bouton langue --- */
+    /* --- logo + language button --- */
     '.brand-dot{width:30px!important;height:30px!important;border-radius:10px!important;background:none!important;display:grid!important;place-items:center!important;box-shadow:0 8px 20px -6px rgba(255,45,85,.6)!important}',
     '.brand-dot svg{width:100%;height:100%;display:block}',
     '#lang-btn{width:auto!important;height:38px!important;padding:0 13px!important;border-radius:999px!important;',
@@ -38,7 +38,7 @@
     '#lang-btn svg{width:15px;height:15px;opacity:.9}',
     '#theme-btn{width:38px!important;height:38px!important;border-radius:999px!important;display:grid!important;place-items:center!important;background:rgba(255,255,255,.09)!important;border:1px solid rgba(255,255,255,.16)!important}',
 
-    /* --- divers sûrs --- */
+    /* --- safe misc --- */
     '[hidden]{display:none!important}',
     'img{max-width:100%}',
     '.vol{display:none!important}'
@@ -67,7 +67,7 @@
     }
   }
 
-  /* détacher les barres pour qu'elles restent fixes */
+  /* detach bars so they stay fixed */
   function detacher() {
     ['tabs', 'mini', 'player', 'addsheet', 'queue'].forEach(function (id) {
       var e = document.getElementById(id);
@@ -75,7 +75,7 @@
     });
   }
 
-  /* traductions */
+  /* translations */
   function lang() { return (window.S && window.S.lang) || 'es'; }
   function traduire() {
     var es = lang() === 'es';

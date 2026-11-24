@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Sonora — smoke test de l'API et du lecteur. Sortie code 0 si tout passe.
+// Sonora - API and player smoke test. Exit code 0 if everything passes.
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 

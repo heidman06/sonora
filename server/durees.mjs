@@ -1,4 +1,4 @@
-// Sonora — durées des titres via Piped, cache SQLite track_meta
+// Sonora - track durations via Piped, SQLite track_meta cache
 const PIPED_URL = (process.env.PIPED_URL || 'http://127.0.0.1:8081').replace(/\/$/, '');
 
 export async function dureePiped(id) {

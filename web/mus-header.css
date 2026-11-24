@@ -1,4 +1,4 @@
-/* En-tête : logo à gauche, langue + thème collés à l'extrême droite. */
+/* Header: logo left, language + theme pinned to the far right. */
 .top-row {
   display: flex !important;
   align-items: center !important;

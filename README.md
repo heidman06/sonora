@@ -1,5 +1,7 @@
 # Sonora
 
+![Sonora](docs/screenshots/banner.svg)
+
 [![CI](https://github.com/heidman06/sonora/actions/workflows/ci.yml/badge.svg)](https://github.com/heidman06/sonora/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/heidman06/sonora)](https://github.com/heidman06/sonora/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -18,6 +20,21 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 - **Multi-account**: scrypt passwords, bearer sessions, per-account isolation
 - **Security**: 30-day session TTL, server-side logout revocation, input validation
 - **Mobile-first PWA**: FR/ES UI, light/dark theme, iOS background audio
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/home-mobile.png" width="250" alt="Sonora home"><br><sub>Home and Daily Mixes</sub></td>
+    <td align="center"><img src="docs/screenshots/player-mobile.png" width="250" alt="Sonora player"><br><sub>Full-screen player</sub></td>
+    <td align="center"><img src="docs/screenshots/library-mobile.png" width="250" alt="Sonora library"><br><sub>Library and downloads</sub></td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center"><img src="docs/screenshots/desktop-light.png" width="820" alt="Sonora desktop light theme"><br><sub>Desktop, light theme</sub></td>
+  </tr>
+</table>
+
+The app UI is currently available in French and Spanish; the documentation is in English.
 
 ## Architecture
 

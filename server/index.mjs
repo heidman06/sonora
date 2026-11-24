@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Sonora — serveur autonome (API + audio + PWA statique)
-// Variables : SONORA_PORT, SONORA_HOST, SONORA_DATA, SONORA_COOKIES, YTDLP_PATH,
+// Sonora - standalone server (API + audio + static PWA)
+// Variables: SONORA_PORT, SONORA_HOST, SONORA_DATA, SONORA_COOKIES, YTDLP_PATH,
 //             SONORA_NODE_BIN, SONORA_EJS, SONORA_CACHE_MAX_BYTES, PIPED_URL
 import http from 'node:http';
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';

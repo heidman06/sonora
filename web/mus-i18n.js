@@ -1,5 +1,5 @@
 'use strict';
-/* Traductions seules — aucun style, aucune mise en page. */
+/* Translations only - no styles, no layout. */
 (function () {
   function lang() { return (window.S && window.S.lang) || 'es'; }
   function set(sel, txt) { var e = document.querySelector(sel); if (e && txt && e.textContent !== txt) e.textContent = txt; }

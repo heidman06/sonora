@@ -1,6 +1,6 @@
-// Sonora — passerelle Subsonic (CarPlay via Amperfy / clients Subsonic)
-// Auth legacy : u + p (p=enc:hex accepté). Auth token : u + t + s si le mot de passe
-// dédié est fourni dans SONORA_SONIC_USERS="user:pass,user2:pass2".
+// Sonora - Subsonic gateway (CarPlay via Amperfy / Subsonic clients)
+// Legacy auth: u + p (p=enc:hex accepted). Token auth: u + t + s if the dedicated
+// password is provided in SONORA_SONIC_USERS="user:pass,user2:pass2".
 import { createHash } from 'node:crypto';
 import { ouvrirBase, identifiants, lancerYtdlp } from './musique.mjs';
 import { dureesConnues, dureesManquantes } from './durees.mjs';
@@ -21,7 +21,7 @@ function entier(v, def, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-// Cache d'auth (scrypt coûte ~50 ms) — TTL court, clé = hash identifiants.
+// Auth cache (scrypt costs ~50 ms) - short TTL, key = credentials hash.
 const authCache = new Map();
 const AUTH_TTL = 10 * 60 * 1000;
 function cacheAuth(cle, row) {

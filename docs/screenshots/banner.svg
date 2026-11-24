@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-label="Sonora - self-hosted music PWA">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a0710"/>
+      <stop offset="0.55" stop-color="#0b0b12"/>
+      <stop offset="1" stop-color="#0a0a0f"/>
+    </linearGradient>
+    <linearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff5c8a"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.2" cy="0.15" r="0.6">
+      <stop offset="0" stop-color="#ff5c8a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff5c8a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.85" cy="0.8" r="0.6">
+      <stop offset="0" stop-color="#8b5cf6" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#8b5cf6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+  <rect width="1200" height="360" rx="28" fill="url(#glow1)"/>
+  <rect width="1200" height="360" rx="28" fill="url(#glow2)"/>
+  <g transform="translate(84 108)">
+    <rect width="120" height="120" rx="30" fill="url(#logo)"/>
+    <rect x="28" y="58" width="10" height="26" rx="5" fill="#fff"/>
+    <rect x="46" y="44" width="10" height="54" rx="5" fill="#fff"/>
+    <rect x="64" y="34" width="10" height="72" rx="5" fill="#fff"/>
+    <rect x="82" y="52" width="10" height="36" rx="5" fill="#fff"/>
+  </g>
+  <text x="240" y="170" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="92" font-weight="700" fill="#ffffff" letter-spacing="-2">Sonora</text>
+  <text x="244" y="222" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="26" fill="#b9b9c6">Self-hosted music &#183; Mix &#183; Recommendations &#183; CarPlay</text>
+</svg>

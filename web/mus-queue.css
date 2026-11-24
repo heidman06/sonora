@@ -1,4 +1,4 @@
-/* File d'attente — feuille basse, opaque, arrondie. Aucun autre sélecteur touché. */
+/* Queue - bottom sheet, opaque, rounded. No other selectors touched. */
 #queue {
   top: auto !important;
   bottom: 0 !important;

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.16.2 - 2026-11-24
+- Added banner and fresh mobile/desktop screenshots to the README
+- Translated all source-code comments to English
+- No functional change
+
 ## v1.16.1 - 2026-11-24
 - English documentation for the public open-source repository
 - README badges, English release checklist and package metadata

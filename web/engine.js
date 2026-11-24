@@ -1,4 +1,4 @@
-/* Sonora — moteur : API Piped, lecteur, favoris, téléchargements, files. */
+/* Sonora - engine: Piped API, player, favorites, downloads, queues. */
 'use strict';
 
 var API = location.protocol + '//' + location.hostname + ':8480';
@@ -116,7 +116,7 @@ function fallbackAudio(id) {
 }
 var favPlaylistId = '';
 
-/* ---------- IndexedDB téléchargements ---------- */
+/* ---------- IndexedDB downloads ---------- */
 var DB = null;
 function dbOpen() {
   if (DB) return DB;
@@ -225,7 +225,7 @@ function pushRecent(t) {
   STORE.set(ukey('recent'), S.recent);
 }
 
-/* ---------- favoris ---------- */
+/* ---------- favorites ---------- */
 function isFav(id) { return S.favs.some(function (x) { return x.id === id; }); }
 function toggleFav(track) {
   if (!track || !track.id) return false;
@@ -274,7 +274,7 @@ function loadPlaylists() {
   return api('/user/playlists').then(function (l) { S.playlists = l || []; return S.playlists; });
 }
 
-/* ---------- lecteur ---------- */
+/* ---------- player ---------- */
 var mediaVideo = null, mediaAudio = null;
 function bindMedia(el) {
   el.addEventListener('timeupdate', function () {
@@ -325,7 +325,7 @@ function initMedia() {
     bindMedia(el);
   });
   try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch (e) {}
-  // aucune lecture automatique au démarrage
+  // no autoplay at startup
   S.playing = false; intentPlay = false;
   [mediaVideo, mediaAudio].forEach(function (el) {
     if (!el) return;
@@ -493,7 +493,7 @@ function setMediaSession() {
   } catch (e) {}
 }
 
-/* ---------- téléchargement ---------- */
+/* ---------- download ---------- */
 function downloadTrack(track) {
   if (!track || !track.id) return Promise.reject(new Error('titre'));
   toast('Téléchargement en cours…');
@@ -512,7 +512,7 @@ function removeDownload(id) {
   return dlDel(id).then(function () { return dlAll(); }).then(function (all) { S.downloads = all; toast('Supprimé'); });
 }
 
-/* ---------- recherche / découverte ---------- */
+/* ---------- search / discovery ---------- */
 function suggest(q) { return api('/suggestions?query=' + encodeURIComponent(q)).catch(function () { return []; }); }
 function searchPage(q, filter, nextpage) {
   var u = '/search?q=' + encodeURIComponent(q) + '&filter=' + (filter || 'music_songs');
