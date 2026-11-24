@@ -156,6 +156,31 @@ export function lancerYtdlp(args, ms) {
 
 const PRINT = '%(id)s' + TAB + '%(title)s' + TAB + '%(channel)s' + TAB + '%(duration)s';
 
+function ytPlaylist(list) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(YTDLP, ['--cookies', COOKIES, '--js-runtimes', 'node:' + NODE_BIN, '--remote-components', EJS_COMPONENTS, '--flat-playlist', '--playlist-end', '100', '--no-warnings', '-J', 'https://www.youtube.com/playlist?list=' + list], { stdio: ['ignore', 'pipe', 'ignore'] });
+    let sortie = '';
+    proc.stdout.on('data', (c) => { sortie += c.toString('utf8'); });
+    const minuteur = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (e) {} reject(new Error('timeout')); }, 30000);
+    proc.on('close', (code) => {
+      clearTimeout(minuteur);
+      if (code !== 0) return reject(new Error('yt-dlp'));
+      try {
+        const info = JSON.parse(sortie);
+        const tracks = (info.entries || []).filter((e) => e && e.id).map((e) => ({
+          videoId: e.id,
+          title: e.title || '',
+          artist: e.channel || e.uploader || '',
+          duration: Number(e.duration) || 0,
+          thumb: (e.thumbnails && e.thumbnails[0] && e.thumbnails[0].url) || ('https://i.ytimg.com/vi/' + e.id + '/mqdefault.jpg'),
+        }));
+        resolve({ name: info.title || '', tracks });
+      } catch (e) { reject(e); }
+    });
+    proc.on('error', reject);
+  });
+}
+
 export async function resoudre(titre, artiste) {
   const d = ouvrirBase();
   const q = (String(artiste || '').trim() + ' ' + String(titre || '').trim()).trim().toLowerCase();
@@ -599,6 +624,11 @@ export function handleMusique(req, res, path, url) {
         return json(200, { ok: true });
       }
 
+      if (route === '/ytplaylist' && req.method === 'GET') {
+        const list = String(url.searchParams.get('list') || '').trim();
+        if (!/^[A-Za-z0-9_-]{10,80}$/.test(list)) return json(400, { error: 'list' });
+        try { return json(200, await ytPlaylist(list)); } catch (e) { return json(502, { error: 'playlist introuvable' }); }
+      }
       if (route === '/recos') {
         const n = entier(url.searchParams.get('n'), 20, 1, 50);
         return json(200, await recos(u.id, n));

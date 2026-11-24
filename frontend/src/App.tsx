@@ -10,6 +10,8 @@ import { MiniPlayer } from './components/MiniPlayer'
 import { PlayerSheet } from './components/PlayerSheet'
 import { QueueSheet } from './components/QueueSheet'
 import { AddSheet } from './components/AddSheet'
+import { DesktopSidebar } from './components/DesktopSidebar'
+import { DesktopPlayer } from './components/DesktopPlayer'
 import { HomeView } from './views/HomeView'
 import { SearchView } from './views/SearchView'
 import { LibraryView } from './views/LibraryView'
@@ -36,6 +38,18 @@ export default function App() {
     ;(window as unknown as { Sonora?: unknown }).Sonora = { S: { playing: state.playing, lang: state.lang } }
   }, [state.playing, state.lang])
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null
+      if (target && target.matches('input,textarea,select,[contenteditable=true]')) return
+      if (event.code === 'Space') { event.preventDefault(); engine.togglePlay() }
+      if (event.code === 'ArrowRight') { event.preventDefault(); engine.playNext(false) }
+      if (event.code === 'ArrowLeft') { event.preventDefault(); engine.playPrev() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const lang = state.lang as Lang
   const t = (key: string) => tr(lang, key)
 
@@ -44,7 +58,6 @@ export default function App() {
   }
 
   const play = (track: Track, queue: Track[], index: number) => {
-    setPlayerOpen(true)
     void engine.playTrack(track, queue, index)
   }
 
@@ -56,6 +69,7 @@ export default function App() {
 
   return (
     <div className="app" id="app">
+      <DesktopSidebar lang={lang} state={state} route={route} />
       <header className="top" id="top">
         <div className="top-row">
           <a className="brand" href="#/listen" aria-label="Sonora">
@@ -113,6 +127,12 @@ export default function App() {
           onAdd={(playlistId, track) => { void engine.addToPlaylist(playlistId, track).then(() => setAddOpen(false)) }}
           onCreate={(name) => engine.createPlaylist(name)} />
       )}
+
+      <DesktopPlayer state={state} lang={lang} fmt={(seconds) => engine.timeLabel(seconds)}
+        onOpen={() => setPlayerOpen(true)} onToggle={() => engine.togglePlay()}
+        onNext={() => engine.playNext(false)} onPrev={() => engine.playPrev()}
+        onSeek={(ratio) => engine.seekRatio(ratio)} onVolume={(value) => engine.setVolume(value)}
+        onQueue={() => setQueueOpen(true)} onLike={() => state.current && void engine.toggleLike(state.current)} />
 
       {state.toast && <div className="toast">{state.toast}</div>}
     </div>

@@ -18,7 +18,8 @@ export class ApiError extends Error {
 export interface PipedPlaylist {
   name: string
   thumbnailUrl?: string
-  relatedStreams: PipedItem[]
+  relatedStreams?: PipedItem[]
+  videos?: PipedItem[]
 }
 
 export class Api {
@@ -79,6 +80,15 @@ export class Api {
     return this.json(MUS + '/playlists/' + id, { method: 'DELETE' })
   }
 
+  private async ytPlaylist(id: string): Promise<PlaylistDetail> {
+    const d = await this.json<{ name: string; tracks: Array<{ videoId: string; title: string; artist: string; duration: number; thumb?: string }> }>(MUS + '/ytplaylist?list=' + encodeURIComponent(id))
+    return {
+      id: 0,
+      name: d.name || '',
+      tracks: d.tracks.map((t) => ({ id: t.videoId, title: t.title || '', artist: t.artist || '', thumb: t.thumb || thumbOf(t.videoId), duration: t.duration || 0 })),
+    }
+  }
+
   async playlist(id: number | string): Promise<PlaylistDetail> {
     if (/^\d+$/.test(String(id))) {
       const d = await this.json<{ id: number; name: string; tracks: Array<{ videoId: string; title: string; artist: string; duration: number }> }>(MUS + '/playlists/' + id)
@@ -94,8 +104,12 @@ export class Api {
         })),
       }
     }
+    if (!/^\d+$/.test(String(id))) {
+      try { const resolved = await this.ytPlaylist(String(id)); if (resolved.tracks.length) return resolved } catch { /* fall back to Piped */ }
+    }
     const d = await this.json<PipedPlaylist>(PIPED + '/playlists/' + encodeURIComponent(String(id)))
-    return { id: 0, name: d.name || '', tracks: (d.relatedStreams || []).map(pipedTrack) }
+    const streams = (d.relatedStreams && d.relatedStreams.length) ? d.relatedStreams : (Array.isArray(d.videos) ? d.videos : [])
+    return { id: 0, name: d.name || '', tracks: streams.map(pipedTrack) }
   }
 
   addToPlaylist(playlistId: number | string, track: Track): Promise<void> {

@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.0.2 - 2026-11-24
+- Desktop layout: sidebar navigation, wide content and a dedicated player bar
+- Desktop player is now a two-column dialog; mobile keeps the full-screen sheet
+- Home hero with greeting/date; light-theme sidebar fixed
+- Album playlists resolved through yt-dlp when Piped returns metadata only
+- HLS track changes now update history and MediaSession metadata
+- Keyboard shortcuts on PC (Space, ArrowLeft/ArrowRight)
+
 ## v2.0.1 - 2026-11-24
 - PWA update badge now respects React playback state (no forced reload while playing)
 - Final React build deployed as the production  client

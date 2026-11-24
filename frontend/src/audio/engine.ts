@@ -541,6 +541,13 @@ export class PlayerEngine {
         const dur = this.hls.durs[idx] || 1
         const rel = Math.max(0, Math.min(dur, t - off))
         const current = this.hls.queue[idx] || this.state.current
+        if (current && current.id !== this.state.current?.id) {
+          this.api.pushHistory(current)
+          this.patch({ current, currentTime: rel, duration: dur, hls: true })
+          this.updateMediaSession()
+          if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } }
+          return
+        }
         this.patch({ current, currentTime: rel, duration: dur, hls: true })
         if (this.watchdogTries > 0) this.watchdogTries = 0
         return
@@ -548,8 +555,8 @@ export class PlayerEngine {
       const duration = Number.isFinite(this.media.duration) ? this.media.duration : (this.state.current?.duration || 0)
       this.patch({ currentTime: this.media.currentTime, duration })
     })
-    this.media.addEventListener('play', () => { this.patch({ playing: true }); this.prefetchNext() })
-    this.media.addEventListener('pause', () => this.patch({ playing: false }))
+    this.media.addEventListener('play', () => { this.patch({ playing: true }); this.prefetchNext(); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } } })
+    this.media.addEventListener('pause', () => { this.patch({ playing: false }); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'paused' } catch { /* noop */ } } })
     this.media.addEventListener('playing', () => { this.patch({ playing: true, loadingTrack: '' }); this.clearStall() })
     this.media.addEventListener('waiting', () => this.armStall())
     this.media.addEventListener('stalled', () => this.armStall())

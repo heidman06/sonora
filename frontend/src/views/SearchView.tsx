@@ -137,18 +137,25 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
           )
         })}
 
-        {filter === 'music_albums' && items.map((item, index) => {
-          const id = videoIdOf(item.url || '') || (item.url || '').split('list=')[1]?.split('&')[0] || ''
-          return (
-            <button className="track" key={String(item.url) + index} onClick={() => id && navigate('#/playlist/' + id)}>
-              <img className="track-art" src={item.thumbnail || ''} alt="" loading="lazy" />
-              <div className="track-txt">
-                <div className="track-title">{item.name || item.title}</div>
-                <div className="track-sub">{item.uploaderName || ''}</div>
-              </div>
-            </button>
-          )
-        })}
+        {filter === 'music_albums' && (
+          <div className="pl-grid" style={{ marginTop: 8 }}>
+            {items.map((item, index) => {
+              const url = item.url || ''
+              const id = url.split('list=')[1]?.split('&')[0] || videoIdOf(url)
+              return (
+                <button className="pl-card" key={String(item.url) + index} onClick={() => id && navigate('#/playlist/' + id)}>
+                  <img src={item.thumbnail || ''} alt="" loading="lazy" />
+                  <span className="pl-card-shade" />
+                  <span className="pl-card-txt">
+                    <span className="pl-card-name">{item.name || item.title}</span>
+                    <span className="pl-card-count">{item.uploaderName || ''}</span>
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
 
         {nextpage && (filter === 'music_songs' || filter === 'music_videos') && (
           <button className="load-more" onClick={loadMore}>{tr(lang, 'loadMore')}</button>

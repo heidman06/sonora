@@ -3,7 +3,7 @@ import { engine } from '../audio/engine'
 import type { PlayerState } from '../audio/engine'
 import type { Lang, MixSummary, Track } from '../lib/types'
 import { storage, userKey } from '../lib/storage'
-import { tr } from '../lib/i18n'
+import { tr, hello, dateLabel } from '../lib/i18n'
 import { navigate } from '../lib/hooks'
 import { Icon } from '../components/Icon'
 
@@ -106,7 +106,12 @@ export function HomeView({ lang, state, onPlay }: Props) {
 
   return (
     <>
-      <div className="chips" style={{ marginTop: 18 }}>
+      <div className="home-hero">
+        <div className="eyebrow">{dateLabel(lang)}</div>
+        <h1 className="h1">{hello(lang)}</h1>
+        <p className="sub">{tr(lang, 'homeSubtitle')}</p>
+      </div>
+      <div className="chips" style={{ marginTop: 16 }}>
         {MOODS.slice(0, 8).map((mood) => (
           <button className="chip" key={mood.q} onClick={() => navigate('#/search/' + encodeURIComponent(mood.q))}>
             {lang === 'fr' ? mood.fr : lang === 'es' ? mood.es : mood.en}

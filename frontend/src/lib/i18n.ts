@@ -3,7 +3,7 @@ import type { Lang } from './types'
 type Dict = Record<string, string>
 
 const fr: Dict = {
-  listen: 'Écouter', search: 'Rechercher', library: 'Bibliothèque',
+  listen: 'Écouter', search: 'Rechercher', library: 'Bibliothèque', homeSubtitle: 'Ta musique. Tes mix.',
   yourMixes: 'Tes Mix', forYou: 'Pour toi', recent: 'Récemment écouté',
   exploreMoods: 'Explorer par envie', yourPlaylists: 'Tes playlists', seeAll: 'Tout voir',
   signInTitle: 'Tes playlists, ici', signInBody: 'Connecte-toi avec ton compte Sonora pour retrouver tes playlists.',
@@ -33,7 +33,7 @@ const fr: Dict = {
 }
 
 const en: Dict = {
-  listen: 'Listen', search: 'Search', library: 'Library',
+  listen: 'Listen', search: 'Search', library: 'Library', homeSubtitle: 'Your music. Your mixes.',
   yourMixes: 'Your Mixes', forYou: 'For you', recent: 'Recently played',
   exploreMoods: 'Explore by mood', yourPlaylists: 'Your playlists', seeAll: 'See all',
   signInTitle: 'Your playlists, here', signInBody: 'Sign in with your Sonora account to find your playlists.',
@@ -63,7 +63,7 @@ const en: Dict = {
 }
 
 const es: Dict = {
-  listen: 'Escuchar', search: 'Buscar', library: 'Biblioteca',
+  listen: 'Escuchar', search: 'Buscar', library: 'Biblioteca', homeSubtitle: 'Tu música. Tus mixes.',
   yourMixes: 'Tus Mix', forYou: 'Para ti', recent: 'Escuchado hace poco',
   exploreMoods: 'Explora por gusto', yourPlaylists: 'Tus listas', seeAll: 'Ver todo',
   signInTitle: 'Tus listas, aquí', signInBody: 'Inicia sesión con tu cuenta Sonora para recuperar tus listas.',
