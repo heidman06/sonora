@@ -1,20 +1,20 @@
-# Sécurité
+# Security
 
-## Signaler une vulnérabilité
+## Reporting a vulnerability
 
-Contact : Reda (voir le profil GitHub du mainteneur). Ne pas ouvrir d issue publique pour une faille non corrigée.
+Please use GitHub private vulnerability reporting (Security tab) or contact the maintainer directly. Do not open a public issue for an unpatched vulnerability.
 
-## Modèle de menace
+## Threat model
 
-- Sonora est prévu pour un usage auto-hébergé derrière un VPN/tailnet ou un reverse proxy authentifié.
-- Ne pas exposer /subsonic/rest sur Internet sans HTTPS + contrôle d accès.
-- Les mots de passe sont stockés en scrypt (sel aléatoire). Sessions TTL 30 jours, révoquées au logout.
-- Les cookies YouTube (data/yt-cookies.txt) donnent accès au compte Google utilisé : chmod 600, jamais committés.
-- La passerelle Subsonic accepte l auth legacy (mot de passe en clair dans l URL) : à réserver au réseau local/VPN ; auth token MD5 optionnelle via SONORA_SONIC_USERS.
-- Aucune télémétrie, aucun appel externe hors YouTube/Piped configurés.
+- Sonora is designed for self-hosted use behind a VPN, tailnet or authenticated reverse proxy.
+- Never expose /subsonic/rest or /api/mus to the Internet without HTTPS and access control.
+- Passwords are stored with scrypt (random salt). Sessions have a 30-day TTL and are revoked on logout.
+- YouTube cookies (data/yt-cookies.txt) grant access to the linked Google account: chmod 600, never commit.
+- The Subsonic gateway accepts legacy password authentication (password in URL query): keep it on a trusted network/VPN. Optional MD5 token authentication is available via SONORA_SONIC_USERS.
+- No telemetry. No external calls apart from configured YouTube/Piped endpoints.
 
-## Bonnes pratiques
+## Operational practices
 
-- Changer les mots de passe par défaut avant exposition.
-- Sauvegarder data/ (SQLite WAL + cookies + cache audio).
-- Mettre à jour yt-dlp régulièrement (les cookies expirent).
+- Change default passwords before exposing the app.
+- Back up data/ (SQLite WAL + cookies + audio cache).
+- Keep yt-dlp up to date; cookies expire periodically.

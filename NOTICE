@@ -1,10 +1,10 @@
 Sonora
-Copyright (c) 2026 Mohamed Reda Amlah — licence MIT (voir LICENSE).
+Copyright (c) 2026 Mohamed Reda Amlah - MIT License (see LICENSE).
 
-Tiers et attributions :
-- Icônes SVG de l interface : dessins originaux inspirés du style Lucide (https://lucide.dev), licence ISC. Aucun fichier Lucide n est redistribué.
-- Polices : pile système -apple-system / SF Pro d Apple ; aucun fichier de police n est distribué.
-- yt-dlp (appelé comme binaire externe, non embarqué) : Unlicense.
-- Piped (service externe, non embarqué) : AGPL-3.0.
-- Node.js, ffmpeg : licences respectives, non embarqués dans le dépôt.
-- Contenu musical : non distribué ; Sonora lit des flux YouTube/Piped via yt-dlp.
+Third-party notices:
+- UI SVG icons: original drawings inspired by the Lucide icon style (https://lucide.dev), ISC license. No Lucide files are redistributed.
+- Fonts: Apple -apple-system / SF Pro via the system font stack; no font files are distributed.
+- yt-dlp (external binary, not bundled): Unlicense.
+- Piped (external service, not bundled): AGPL-3.0.
+- Node.js, ffmpeg: respective licenses, not bundled in this repository.
+- Music content: not distributed; Sonora streams YouTube/Piped media through yt-dlp.

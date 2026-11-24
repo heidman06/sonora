@@ -11,3 +11,4 @@ yt-cookies.txt
 .env.*
 *.log
 .bak*
+!.env.example

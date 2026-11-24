@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Test de charge simple : SONORA_BASE, SONORA_USER, SONORA_PASSWORD requis.
+// Simple load test: SONORA_BASE, SONORA_USER and SONORA_PASSWORD are required.
 const BASE = (process.env.SONORA_BASE || 'http://127.0.0.1:3011').replace(/\/$/, '');
 const USER = process.env.SONORA_USER;
 const PASS = process.env.SONORA_PASSWORD;
 if (!USER || !PASS) { console.error('SONORA_USER et SONORA_PASSWORD requis'); process.exit(2); }
 const login = await fetch(BASE + '/api/mus/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: USER, password: PASS }) }).then((r) => r.json());
-if (!login.token) { console.error('login refusé'); process.exit(2); }
+if (!login.token) { console.error('login rejected'); process.exit(2); }
 const H = { Authorization: 'Bearer ' + login.token };
 async function run(nom, n, conc, fn) {
   const lat = []; let ok = 0, ko = 0;

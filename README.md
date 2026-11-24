@@ -1,119 +1,84 @@
 # Sonora
 
-PWA musique auto-hébergée, style Apple Music / Spotify, avec un vrai moteur de recommandations et un Mix radio.
+[![CI](https://github.com/heidman06/sonora/actions/workflows/ci.yml/badge.svg)](https://github.com/heidman06/sonora/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/heidman06/sonora)](https://github.com/heidman06/sonora/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Statut : alpha open source (v1.3, 2026-11-24).** Serveur autonome disponible (`server/index.mjs`),
-> configuration par variables d'environnement, smoke test 13 vérifications. Reste : Dockerfile, CI, tests hors machine (voir docs/OSS-CHECKLIST.md).
+Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalized recommendations, daily mixes, playlist management, Subsonic gateway for CarPlay, and offline playback.
 
-## Fonctionnalités
+## Features
 
-- Lecture audio (m4a) avec cache serveur, Range/seek, reprise, file d'attente, mode aléatoire/répétition.
-- Comptes multi-utilisateurs (auth scrypt, Bearer, données séparées).
-- Playlists, favoris, historique, import Spotify.
-- **Recommandations v3** : titres liés via Piped + affinités pondérées (likes, historique par récence, playlists), filtrage des titres parasites, déduplication, cache SQLite 3 h en stale-while-revalidate.
-- **Mix** : radio de 30 titres mêlant découvertes, favoris, historique et playlists (cache 45 min).
-- **Durées réelles** : playlists, favoris et historique affichent les durées (cache `track_meta` rempli via Piped).
-- **Hors-ligne** : téléchargement des titres (IndexedDB) et lecture depuis le blob local, même si le flux réseau est coupé.
-- **Feedback recos** : bouton ✕ sur « Pour toi » (dismiss) pour affiner les recommandations.
-- **Daily Mixes** : 3 mix personnalisés (Découvertes / En boucle / Tes favoris) affichés sur l'accueil.
-- PWA mobile-first, thème clair/sombre, FR/ES, lecture en arrière-plan iOS.
-- Endpoint `/health` public + smoke test automatisé (timer toutes les 15 min).
+- **Mix radio**: 30 tracks blending discoveries, likes, history and playlists
+- **Daily Mixes**: Discoveries / On repeat / Favorites
+- **Recommendations v3**: Piped related tracks + weighted artist affinities, versioned cache, stale-while-revalidate
+- **Recommendation feedback**: dismiss (x) or like recommendations directly from the home screen
+- **Subsonic gateway** for **CarPlay / Amperfy**: playlists, albums, artists, search, artwork, streaming
+- **Offline downloads**: IndexedDB blob storage, playback without network
+- **Real durations** for playlists, likes, history and Subsonic
+- **Multi-account**: scrypt passwords, bearer sessions, per-account isolation
+- **Security**: 30-day session TTL, server-side logout revocation, input validation
+- **Mobile-first PWA**: FR/ES UI, light/dark theme, iOS background audio
 
 ## Architecture
 
-```
-web/ (PWA statique)  →  hub Node (API /api/mus, /api/piped, /musique/dl)
-                              │
-                              ├─ server/musique.mjs (SQLite, recos, mix, auth)
-                              ├─ server/musique-resolve.mjs (imports Spotify)
-                              └─ yt-dlp + cache data/musique/<id>.m4a
-```
+    web/ (static PWA)  ->  Node hub (API /api/mus, /subsonic/rest, /musique/dl)
+                                |
+                                +- server/musique.mjs (auth, playlists, likes, history, recos, Mix)
+                                +- server/subsonic.mjs (CarPlay gateway)
+                                +- server/durees.mjs (duration cache via Piped)
+                                +- server/audio.mjs (yt-dlp cache, Range 206, progressive streaming)
 
-## Prérequis
+Storage: SQLite (node:sqlite) + yt-dlp m4a cache + optional Piped instance.
 
-- Node.js >= 24 (`node:sqlite`)
-- yt-dlp + ffmpeg + cookies YouTube valides
-- Une instance Piped (optionnelle, pour la recherche) ou le fallback yt-dlp du hub
+## Quick start (Docker)
 
-## Démarrage rapide
+    git clone https://github.com/heidman06/sonora.git
+    cd sonora
+    mkdir -p data
+    # optional: YouTube cookies for yt-dlp (Netscape format)
+    docker compose up -d --build
+    # open http://127.0.0.1:3011/musique/
 
-Le serveur autonome est disponible : `server/index.mjs` (API + audio + PWA + proxy Piped optionnel).
+The image bundles Node 24, yt-dlp and ffmpeg. Data lives in ./data (SQLite, cookies, audio cache).
 
-```bash
-npm --version >/dev/null 2>&1 || true
-mkdir -p data
-cp .env.example .env   # adapter les chemins
-cp /chemin/yt-cookies.txt data/yt-cookies.txt && chmod 600 data/yt-cookies.txt
-SONORA_DATA=./data PIPED_URL=http://127.0.0.1:8081 node server/index.mjs
-# → http://127.0.0.1:3011/musique/
-```
+## Local development
 
-Variables principales : `SONORA_PORT`, `SONORA_HOST`, `SONORA_DATA`, `SONORA_COOKIES`, `YTDLP_PATH`, `FFMPEG_PATH`, `SONORA_NODE_BIN`, `SONORA_EJS`, `SONORA_CACHE_MAX_BYTES`, `PIPED_URL`.
+Requirements: Node.js 24+, yt-dlp, ffmpeg, optional Piped instance.
+
+    cp .env.example .env
+    npm install --no-audit --no-fund
+    npm run check
+    npm test
+    SONORA_DATA=./data PIPED_URL=http://127.0.0.1:8081 node server/index.mjs
+
+Open http://127.0.0.1:3011/musique/. Two demo accounts are seeded on first run; see data/musique-users.txt.
 
 ## CarPlay (Amperfy)
 
-Sonora expose une **passerelle Subsonic** compatible avec [Amperfy](https://apps.apple.com/app/amperfy/id1510865828) (CarPlay natif) :
+Sonora exposes a Subsonic-compatible API at **/subsonic/rest**. Amperfy (App Store, CarPlay support) can browse playlists, albums and artists and play streams.
 
-1. Installer **Amperfy** sur l'iPhone.
-2. Ajouter un serveur : URL `https://votre-domaine.tld:8451/subsonic` (ou l'URL de votre instance), type **Subsonic**.
-3. Au login, choisir le mode **legacy** (mot de passe) — Amperfy v1.0.7+ le propose.
-4. Identifiants : ceux de Sonora (`heid` / `maria`).
+1. Install Amperfy
+2. Add server: https://your-domain.tld/subsonic
+3. Use legacy login with your Sonora credentials
 
-La passerelle traduit playlists, favoris, recherche, pochettes et streams vers le protocole Subsonic.
-Guide détaillé : [docs/CARPLAY.md](docs/CARPLAY.md).
-Durées réelles remplies en tâche de fond via Piped (cache `track_meta`).
+Full guide: [docs/CARPLAY.md](docs/CARPLAY.md).
 
-Compatibilité Amperfy : endpoints `ping`, `getMusicFolders`, `getPlaylists`, `getPlaylist`, `search3`, `stream`, `getCoverArt`, `getStarred2`, `getSong`, `getGenres`, `getOpenSubsonicExtensions`, `star/unstar`, `scrobble`, `getRandomSongs`.
-Cache d'authentification mémoire (le scrypt coûte ~50 ms) : ping **~14 ms** en charge.
-Auth token (md5+salt) optionnelle : définir `SONORA_SONIC_USERS="heid:motdepasse,maria:autre"`.
+## Tests and load
 
-## Aperçu
-
-![Daily Mixes](docs/screenshots/daily-mixes.png)
-![Mix en lecture](docs/screenshots/mix-playing.png)
-
-## Docker
-
-```bash
-mkdir -p data
-cp .env.example .env        # adapter les chemins si besoin
-docker compose up -d --build
-# → http://127.0.0.1:3011/musique/
-```
-
-L'image embarque Node 24, yt-dlp et ffmpeg ; les données (SQLite, cookies, cache audio) vivent dans `./data`
-monté sur `/data`. `docker compose config` et un build réel ont été validés.
-
-## Tests
-
-Test de charge : `SONORA_BASE=... SONORA_USER=... SONORA_PASSWORD=... npm run load`
-
-```bash
-npm run check   # syntaxe de tous les modules serveur
-npm test        # 18 tests : recos/filtres + API (health, auth, logout, playlists, likes, historique, mixes, feedback, validation, Subsonic)
-```
-
-La CI GitHub Actions (`.github/workflows/ci.yml`) exécute ces tests puis démarre le serveur autonome
-et vérifie `/api/mus/health` + la page PWA.
+    npm test                  # 18 tests (recos, API, Subsonic, input validation)
+    npm run load              # optional load test (SONORA_USER/PASSWORD required)
 
 ## Documentation
 
-- `docs/API.md` — contrat HTTP complet
-- `docs/PLAYBOOK.md` — exploitation, runbook, incidents
-- `docs/OSS-CHECKLIST.md` — ce qui reste avant la publication
-- `docs/ROADMAP.md` — jalons
+- [API contract](docs/API.md)
+- [CarPlay / Amperfy guide](docs/CARPLAY.md)
+- [Open-source checklist](docs/OSS-CHECKLIST.md)
+- [Publishing guide](docs/PUBLISH.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
-## Tiers
+## License and third-party
 
-Voir [NOTICE](NOTICE).
-
-## Contribuer / Sécurité
-
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [SECURITY.md](SECURITY.md)
-- [CHANGELOG.md](CHANGELOG.md)
-- [Publier sur GitHub](docs/PUBLISH.md)
-
-## Licence
-
-MIT — voir `LICENSE`. Le contenu musical n'est pas distribué : Sonora lit des flux via yt-dlp/Piped.
+MIT - see [LICENSE](LICENSE). Third-party notices: [NOTICE](NOTICE). No music content is distributed: Sonora streams media via yt-dlp/Piped.

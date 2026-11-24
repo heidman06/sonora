@@ -1,10 +1,10 @@
 {
   "name": "sonora",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "private": true,
   "type": "module",
   "license": "MIT",
-  "description": "PWA musique auto-hébergée avec moteur de recommandations et Mix radio",
+  "description": "Self-hosted music PWA with Mix radio, recommendations, Subsonic/CarPlay gateway and offline playback",
   "engines": {
     "node": ">=24"
   },

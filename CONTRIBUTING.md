@@ -1,25 +1,30 @@
-# Contribuer
+# Contributing
 
-Merci ! Sonora est une PWA musique auto-hébergée (Node 24, SQLite, yt-dlp).
+Thanks for helping Sonora! Sonora is a self-hosted music PWA built with Node 24, SQLite and yt-dlp.
 
-## Développement
+## Development setup
 
-    git clone <repo> && cd sonora
+    git clone https://github.com/heidman06/sonora.git
+    cd sonora
     cp .env.example .env
     mkdir -p data
+    npm install --no-audit --no-fund
     npm run check
     npm test
     SONORA_DATA=./data PIPED_URL=http://127.0.0.1:8081 node server/index.mjs
 
-- Node >= 24 (node:sqlite, node:test)
-- Pas de framework frontend : PWA vanilla dans web/
-- Tests : npm test (recos, API, Subsonic) ; charge : npm run load
+Requirements: Node.js 24+, yt-dlp, ffmpeg. YouTube cookies are optional in development.
 
-## Règles
+## Guidelines
 
-- Un commit = un changement cohérent, message clair (vX.Y.Z: ...)
-- Toute évolution d API met à jour docs/API.md
-- Toute intervention ops met à jour docs/PLAYBOOK.md
-- Ne jamais committer : data/, cookies, bases SQLite, secrets
-- Tests et npm run check doivent passer avant PR
-- Pas de dépendances npm si Node natif suffit (philosophie zéro-dépendance)
+- One coherent change per commit; clear commit message (vX.Y.Z: ...).
+- API changes must update docs/API.md.
+- Operations changes must update docs/PLAYBOOK.md in the private deployment repo.
+- Never commit data/, cookies, SQLite files or secrets.
+- Tests and npm run check must pass before a pull request.
+- Prefer Node built-ins over npm dependencies (zero-dependency philosophy).
+- Keep the public documentation in English.
+
+## Reporting bugs
+
+Open a GitHub issue with steps to reproduce, expected and actual behavior, Node and browser versions, and relevant logs. Do not include passwords, cookies or personal data.

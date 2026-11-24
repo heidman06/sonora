@@ -13,11 +13,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Syntaxe
+      - name: Syntax
         run: npm run check
-      - name: Tests unitaires et API
+      - name: Unit and API tests
         run: npm test
-      - name: Démarrage serveur autonome
+      - name: Standalone server startup
         run: |
           export SONORA_DATA=$(mktemp -d)
           export SONORA_HOST=127.0.0.1

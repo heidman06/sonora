@@ -27,7 +27,7 @@ async function attendre() {
     try { const r = await fetch(BASE + '/api/mus/health'); if (r.ok) return; } catch (e) {}
     await new Promise((r) => setTimeout(r, 100));
   }
-  throw new Error('serveur non prêt');
+  throw new Error('server not ready');
 }
 function api(path, opts) {
   const o = Object.assign({}, opts || {});
@@ -72,7 +72,7 @@ test('page PWA', async () => {
   assert.ok(html.includes('engine.js'));
 });
 
-test('inscription, login et isolement par compte', async () => {
+test('registration, login and per-account isolation', async () => {
   const reg = await api('/api/mus/register', { method: 'POST', body: { username: 'tester', password: 'motdepasse123' } });
   assert.equal(reg.status, 200);
   token = reg.body.token;
@@ -82,7 +82,7 @@ test('inscription, login et isolement par compte', async () => {
   assert.equal(sans.status, 401);
 });
 
-test('logout révoque le token', async () => {
+test('logout revokes the token', async () => {
   const r = await api('/api/mus/logout', { method: 'POST' });
   assert.equal(r.status, 200);
   const me = await api('/api/mus/me');
@@ -108,7 +108,7 @@ test('CRUD playlist', async () => {
   assert.equal(g2.status, 404);
 });
 
-test('likes et historique', async () => {
+test('likes and history', async () => {
   const l = await api('/api/mus/likes', { method: 'POST', body: { videoId: VID, title: 'T', artist: 'A' } });
   assert.equal(l.status, 200);
   const likes = await api('/api/mus/likes');
@@ -120,7 +120,7 @@ test('likes et historique', async () => {
   assert.ok(hist.body.some((x) => x.videoId === VID));
 });
 
-test('mix et recos répondent sans erreur', async () => {
+test('mix and recos respond without errors', async () => {
   const m = await api('/api/mus/mix?n=5');
   assert.equal(m.status, 200);
   assert.ok(Array.isArray(m.body));
@@ -130,7 +130,7 @@ test('mix et recos répondent sans erreur', async () => {
   assert.ok(Array.isArray(r.body));
 });
 
-test('paramètres n invalides ne cassent pas l API', async () => {
+test('invalid n parameters do not break the API', async () => {
   for (const path of ['/api/mus/history?n=abc', '/api/mus/history?n=-5', '/api/mus/recos?n=abc', '/api/mus/mix?n=abc']) {
     const r = await api(path);
     assert.equal(r.status, 200, path + ' -> ' + r.status);
@@ -138,7 +138,7 @@ test('paramètres n invalides ne cassent pas l API', async () => {
   }
 });
 
-test('titres et artistes tronqués à 300 caractères', async () => {
+test('titles and artists truncated to 300 characters', async () => {
   const r = await api('/api/mus/likes', { method: 'POST', body: { videoId: 'aaaaaaaaaaa', title: 'T'.repeat(5000), artist: 'A'.repeat(5000) } });
   assert.equal(r.status, 200);
   const likes = await api('/api/mus/likes');
@@ -148,7 +148,7 @@ test('titres et artistes tronqués à 300 caractères', async () => {
   assert.ok(item.artist.length <= 300);
 });
 
-test('daily mixes : 3 mix cohérents', async () => {
+test('daily mixes: 3 coherent mixes', async () => {
   const r = await api('/api/mus/mixes');
   assert.equal(r.status, 200);
   assert.equal(r.body.length, 3);
@@ -162,7 +162,7 @@ test('daily mixes : 3 mix cohérents', async () => {
   }
 });
 
-test('passerelle Subsonic : ping, auth, playlists, stream', async () => {
+test('Subsonic gateway: ping, auth, playlists, stream', async () => {
   const q = 'u=tester&p=motdepasse123&v=1.16.1&c=test&f=json';
   const ping = await fetch(BASE + '/subsonic/rest/ping.view?' + q).then((r) => r.json());
   assert.equal(ping['subsonic-response'].status, 'ok');
@@ -184,7 +184,7 @@ test('passerelle Subsonic : ping, auth, playlists, stream', async () => {
   assert.ok(String(st.headers.get('location')).includes('/musique/dl/dQw4w9WgXcQ'));
 });
 
-test('feedback reco : dismiss et validation', async () => {
+test('reco feedback: dismiss and validation', async () => {
   const ok = await api('/api/mus/feedback', { method: 'POST', body: { videoId: 'aaaaaaaaaab', action: 'dismiss' } });
   assert.equal(ok.status, 200);
   const list = await api('/api/mus/feedback');
@@ -193,7 +193,7 @@ test('feedback reco : dismiss et validation', async () => {
   assert.equal(bad.status, 400);
 });
 
-test('vidéoId invalide rejeté', async () => {
+test('invalid videoId rejected', async () => {
   const r = await api('/api/mus/likes', { method: 'POST', body: { videoId: 'court', title: 'X', artist: 'Y' } });
   assert.equal(r.status, 502);
 });
