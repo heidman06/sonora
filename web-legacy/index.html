@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#08080a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Sonora" />
+<title>Sonora</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon-192.png" />
+<link rel="stylesheet" href="app.css?v=25" />
+<link rel="stylesheet" href="mus-header.css">
+<link rel="stylesheet" href="mus-queue.css">
+</head>
+<body>
+<div id="ambient" class="ambient" aria-hidden="true"></div>
+<div class="app" id="app">
+  <header class="top" id="top">
+    <div class="top-row">
+      <a class="brand" href="#/listen" aria-label="Accueil">
+        <span class="brand-dot"></span>
+        <span class="brand-name">Sonora</span>
+      </a>
+      <button class="icon-btn lang-btn" id="lang-btn" aria-label="Langue">ES</button>
+      <button class="icon-btn" id="theme-btn" aria-label="Changer de thème"></button>
+    </div>
+    <div id="headings"></div>
+  </header>
+  <main id="view" class="view"></main>
+  <nav class="tabs" id="tabs">
+    <a class="tab" data-tab="listen" href="#/listen"><span class="tab-ico" data-ico="listen"></span><span>Écouter</span></a>
+    <a class="tab" data-tab="search" href="#/search"><span class="tab-ico" data-ico="search"></span><span>Rechercher</span></a>
+    <a class="tab" data-tab="library" href="#/library"><span class="tab-ico" data-ico="library"></span><span>Bibliothèque</span></a>
+  </nav>
+  <div class="mini" id="mini" hidden>
+    <img class="mini-art" id="mini-art" alt="" />
+    <div class="mini-txt"><div class="mini-title" id="mini-title"></div><div class="mini-sub" id="mini-sub"></div></div>
+    <button class="mini-btn" id="mini-play" aria-label="Lecture"></button>
+    <button class="mini-next" id="mini-next" aria-label="Suivant"></button>
+    <div class="mini-progress"><span id="mini-progress"></span></div>
+  </div>
+  <div class="sheet" id="player" hidden>
+    <div class="sheet-bg" id="sheet-bg"></div>
+    <div class="sheet-grab"></div>
+    <button class="sheet-close" id="player-close" aria-label="Fermer"></button>
+    <div class="player">
+      <img class="player-art" id="player-art" alt="" />
+      <div class="player-meta">
+        <div class="player-title" id="player-title"></div>
+        <div class="player-artist" id="player-artist"></div>
+      </div>
+      <div class="seek">
+        <input type="range" id="seek" min="0" max="1000" value="0" aria-label="Progression" />
+        <div class="seek-times"><span id="t-cur">0:00</span><span id="t-dur">0:00</span></div>
+      </div>
+      <div class="controls">
+        <button class="ctl small" id="btn-shuffle" aria-label="Aléatoire"></button>
+        <button class="ctl" id="btn-prev" aria-label="Précédent"></button>
+        <button class="ctl main" id="btn-play" aria-label="Lecture"></button>
+        <button class="ctl" id="btn-next" aria-label="Suivant"></button>
+        <button class="ctl small" id="btn-repeat" aria-label="Répéter"></button>
+      </div>
+      <div class="vol"><button class="vol-ico" id="vol-ico" aria-label="Volume"></button><input type="range" id="vol" min="0" max="100" value="90" aria-label="Volume" /></div>
+      <div class="foot-actions">
+        <button class="foot-btn" id="btn-fav" aria-label="Favori"></button>
+        <button class="foot-btn" id="btn-addpl" aria-label="Ajouter à une playlist"></button>
+        <button class="foot-btn" id="btn-dl" aria-label="Télécharger"></button>
+      </div>
+      <div class="player-foot"><button class="queue-btn" id="queue-btn">File d'attente <span id="queue-n"></span></button></div>
+    </div>
+  </div>
+  <div class="sheet small-sheet" id="addsheet" hidden>
+    <div class="sheet-grab"></div>
+    <button class="sheet-close" id="addsheet-close" aria-label="Fermer"></button>
+    <h2 class="queue-title">Ajouter à une playlist</h2>
+    <div id="addlist" class="queue-list"></div>
+    <div class="add-new"><input id="new-pl" placeholder="Nouvelle playlist…" /><button id="new-pl-btn" class="btn-primary">Créer</button></div>
+  </div>
+  <div class="sheet queue-sheet" id="queue" hidden>
+    <div class="sheet-grab"></div>
+    <button class="sheet-close" id="queue-close" aria-label="Fermer"></button>
+    <h2 class="queue-title">File d'attente</h2>
+    <div id="queue-list" class="queue-list"></div>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+</div>
+<video id="media" playsinline preload="metadata"></video>
+<audio id="audio" playsinline preload="metadata"></audio>
+<script src="engine.js?v=38"></script>
+<script src="app.js?v=35"></script>
+
+<script>
+window.addEventListener('error', function (e) {
+  if (document.getElementById('sonora-error')) return;
+  var d = document.createElement('div');
+  d.id = 'sonora-error';
+  d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#07070a;color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center';
+  d.innerHTML = '<div style="font-size:20px;font-weight:700">Un souci est survenu</div><div style="opacity:.6;font-size:14px">' + String(e.message || 'erreur').slice(0, 140) + '</div><button onclick="location.reload(true)" style="background:#fff;color:#000;border:0;border-radius:999px;padding:12px 22px;font-weight:700;font-size:15px">Recharger</button>';
+  document.body.appendChild(d);
+});
+</script>
+<script id="sonora-watchdog">
+try { if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {}); } } catch (e) {}
+setTimeout(function () {
+  var v = document.getElementById('view');
+  if (!v || !v.children.length) {
+    var d = document.createElement('div');
+    d.id = 'sonora-error';
+    d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#07070a;color:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center';
+    d.innerHTML = '<div style="font-size:20px;font-weight:700">Chargement bloqué</div><div style="opacity:.6;font-size:13px">Le navigateur a gardé une vieille version en cache.</div><button onclick="location.href=location.pathname+\'?v=24\'" style="background:#fff;color:#000;border:0;border-radius:999px;padding:12px 22px;font-weight:700;font-size:15px">Forcer la mise à jour</button>';
+    document.body.appendChild(d);
+  }
+}, 5000);
+</script>
+<script src="mus-i18n.js" defer></script>
+<script src="mus-integration.js" defer></script>
+<script src="/pwa-maj.js?v=4" data-app="musique" defer></script>
+</body>
+</html>

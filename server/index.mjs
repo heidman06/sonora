@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.SONORA_PORT || process.env.PORT || 3011);
 const HOST = process.env.SONORA_HOST || '127.0.0.1';
 const WEB = process.env.SONORA_WEB || join(__dirname, '..', 'web');
-const WEB_NEXT = process.env.SONORA_WEB_NEXT || join(__dirname, '..', 'web-next');
+const WEB_LEGACY = process.env.SONORA_WEB_LEGACY || join(__dirname, '..', 'web-legacy');
 const PIPED = (process.env.PIPED_URL || '').replace(/\/$/, '');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -25,14 +25,6 @@ const MIME = {
   '.ico': 'image/x-icon', '.m4a': 'audio/mp4', '.webm': 'audio/webm',
 };
 const pipedCache = new Map();
-
-function injecter(html) {
-  if (!html.includes('mus-header.css')) html = html.replace('</head>', '<link rel="stylesheet" href="mus-header.css?v=3">' + String.fromCharCode(10) + '</head>');
-  if (!html.includes('mus-queue.css')) html = html.replace('</head>', '<link rel="stylesheet" href="mus-queue.css?v=1">' + String.fromCharCode(10) + '</head>');
-  if (!html.includes('mus-i18n.js')) html = html.replace('</body>', '<script src="mus-i18n.js?v=2" defer></script>' + String.fromCharCode(10) + '</body>');
-  if (!html.includes('mus-integration.js')) html = html.replace('</body>', '<script src="mus-integration.js?v=6" defer></script>' + String.fromCharCode(10) + '</body>');
-  return html;
-}
 
 function servirStatique(res, rel, racine) {
   const root = racine || WEB;
@@ -82,15 +74,17 @@ const server = http.createServer(async (req, res) => {
     if (await handleAudio(req, res, path)) return;
     if (path.startsWith('/api/piped/')) { await proxyPiped(req, res, path.slice('/api/piped'.length), url.search); return; }
 
-    if (path === '/musique-next') { res.writeHead(302, { Location: '/musique-next/' }).end(); return; }
-    if (path === '/musique-next/' || path === '/musique-next/index.html') {
-      try { const corps = readFileSync(join(WEB_NEXT, 'index.html')); res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': corps.length }).end(corps); } catch (e) { res.writeHead(404).end('not found'); }
+    if (path === '/musique-next') { res.writeHead(302, { Location: '/musique/' }).end(); return; }
+    if (path === '/musique-next/' || path.startsWith('/musique-next/')) { res.writeHead(302, { Location: path.replace('/musique-next', '/musique') }).end(); return; }
+    if (path === '/musique-legacy') { res.writeHead(302, { Location: '/musique-legacy/' }).end(); return; }
+    if (path === '/musique-legacy/' || path === '/musique-legacy/index.html') {
+      try { const corps = readFileSync(join(WEB_LEGACY, 'index.html')); res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': corps.length }).end(corps); } catch (e) { res.writeHead(404).end('not found'); }
       return;
     }
-    if (path.startsWith('/musique-next/')) { if (servirStatique(res, path.slice('/musique-next/'.length), WEB_NEXT)) return; res.writeHead(404).end('not found'); return; }
+    if (path.startsWith('/musique-legacy/')) { if (servirStatique(res, path.slice('/musique-legacy/'.length), WEB_LEGACY)) return; res.writeHead(404).end('not found'); return; }
     if (path === '/musique') { res.writeHead(302, { Location: '/musique/' }).end(); return; }
     if (path === '/musique/' || path === '/musique/index.html') {
-      const html = injecter(readFileSync(join(WEB, 'index.html'), 'utf8'));
+      const html = readFileSync(join(WEB, 'index.html'), 'utf8');
       const corps = Buffer.from(html, 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': corps.length }).end(corps);
       return;

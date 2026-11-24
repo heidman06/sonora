@@ -105,11 +105,17 @@ var streamCache = {};
 var unlocked = false;
 var intentPlay = false;
 var HLS = { active: false, queue: [], durs: [], offsets: [] };
-var hlsDesactive = false;
-var SONORA_BUILD = '1.19.0';
-function tracer(event, extra) {}
+var hlsCooldownUntil = 0;
+var SONORA_BUILD = '1.18.4';
+function tracer(event, extra) {
+  try {
+    var d = { event: event, build: SONORA_BUILD, ios: IS_IOS, hls: supporteHls(), online: navigator.onLine, queue: (S.queue || []).length };
+    if (extra) for (var k in extra) d[k] = extra[k];
+    fetch('/api/mus/client', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).catch(function () {});
+  } catch (e) {}
+}
 function supporteHls() {
-  if (hlsDesactive) return false;
+  if (Date.now() < hlsCooldownUntil) return false;
   if (IS_IOS) return true;
   try { return document.createElement('audio').canPlayType('application/vnd.apple.mpegurl') !== ''; } catch (e) { return false; }
 }
@@ -332,7 +338,7 @@ function skipBroken() {
 }
 function recoverPlayback(el, pos) {
   if (!cur || media !== el) return;
-  if (HLS.active) { var rc = cur, rq = S.queue.slice(), ri = S.qi; HLS.active = false; hlsDesactive = true; var rcc = Object.assign({}, rc); rcc._noHls = true; playTrack(rcc, rq, ri); return; }
+  if (HLS.active) { var rc = cur, rq = S.queue.slice(), ri = S.qi; HLS.active = false; hlsCooldownUntil = Date.now() + 12000; var rcc = Object.assign({}, rc); rcc._noHls = true; playTrack(rcc, rq, ri); return; }
   var src = String(el.src || '');
   var onServer = src.indexOf('/musique/dl/') >= 0;
   if (onServer && (el._recoverTries || 0) >= 1) { skipBroken(); return; }
@@ -400,7 +406,8 @@ function bindMedia(el) {
     if (media !== el) return;
     if (HLS.active) {
       var hc = cur, hq = S.queue.slice(), hi = S.qi;
-      HLS.active = false; hlsDesactive = true;
+      HLS.active = false; hlsCooldownUntil = Date.now() + 12000;
+      tracer('hls-error', { src: String(el.src || '').slice(0, 120) });
       if (hc) { var hcc = Object.assign({}, hc); hcc._noHls = true; playTrack(hcc, hq, hi); }
       return;
     }
@@ -434,7 +441,7 @@ function initMedia() {
     bindMedia(el);
   });
   try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch (e) {}
-
+  try { fetch('/api/mus/client', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ build: SONORA_BUILD, ios: IS_IOS, hls: supporteHls(), online: navigator.onLine, ua: navigator.userAgent }) }).catch(function () {}); } catch (e) {}
   // aucune lecture automatique au démarrage
   S.playing = false; intentPlay = false;
   [mediaVideo, mediaAudio].forEach(function (el) {
@@ -501,8 +508,22 @@ function hlsDemarrer(index) {
       offsets.push(acc); acc += d; ids.push(t.id); durs.push(d);
     }
     HLS.active = true; HLS.queue = queue; HLS.durs = durs; HLS.offsets = offsets;
+    tracer('hls-start', { index: index || 0, count: queue.length });
     setBlob(''); useMedia(mediaAudio);
-    media.src = location.origin + '/musique/hls/index.m3u8?ids=' + ids.join(',') + '&durs=' + durs.join(',');
+    var hlsUrl = location.origin + '/musique/hls/index.m3u8?ids=' + ids.join(',') + '&durs=' + durs.join(',');
+    media.src = hlsUrl;
+    (function (u) {
+      fetch(u, { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (txt) {
+        var ds = [], re = /#EXTINF:([0-9.]+)/g, m;
+        while ((m = re.exec(txt))) ds.push(parseFloat(m[1]));
+        if (ds.length === HLS.durs.length) {
+          var acc = 0;
+          HLS.durs = ds;
+          HLS.offsets = ds.map(function (d) { var o = acc; acc += d; return o; });
+          if (cur) cur.duration = HLS.durs[S.qi] || cur.duration;
+        }
+      }).catch(function () {});
+    })(hlsUrl);
     var target = offsets[Math.max(0, index || 0)] || 0;
     var poser = function () { try { if (Math.abs(media.currentTime - target) > 1) media.currentTime = target; } catch (e) {} media.play().catch(function () {}); };
     media.addEventListener('loadedmetadata', poser, { once: true });
@@ -525,6 +546,7 @@ function playTrack(track, queue, index) {
     if (i >= 0) S.qi = i; else { S.queue = [track].concat(S.queue); S.qi = 0; }
   }
   cur = track;
+  tracer('play', { track: track.id, hlsCooldown: Math.max(0, Math.round((hlsCooldownUntil - Date.now()) / 1000)), downloaded: estTelecharge(track.id) });
   mediaVideo._fallbackTried = false;
   mediaAudio._fallbackTried = false;
   mediaVideo._recoverTries = 0;
@@ -605,7 +627,7 @@ function shuffleQueue() {
 function cycleRepeat() { S.repeat = S.repeat === 'off' ? 'all' : S.repeat === 'all' ? 'one' : 'off'; paintControls(); }
 function seekTo(v) {
   if (!media) return;
-  if (HLS.active) { var hs = HLS.durs[S.qi] || 1; try { media.currentTime = (HLS.offsets[S.qi] || 0) + (v / 1000) * hs; } catch (e) {} return; }
+  if (HLS.active) { var hoff = HLS.offsets[S.qi] || 0; var hs = HLS.durs[S.qi] || 1; var cible = hoff + (v / 1000) * hs; try { media.currentTime = Math.max(hoff, Math.min(hoff + hs - 0.35, cible)); } catch (e) {} return; }
   if (!media.duration) return;
   media.currentTime = (v / 1000) * media.duration;
 }

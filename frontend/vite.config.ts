@@ -5,7 +5,7 @@ const target = process.env.VITE_PROXY_TARGET || 'https://serveur-heid.tailfb8e87
 
 export default defineConfig({
   plugins: [react()],
-  base: '/musique-next/',
+  base: process.env.VITE_BASE || '/musique/',
   server: {
     port: 5174,
     proxy: {

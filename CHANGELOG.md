@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.0.0 - 2026-11-24
+- New React 19 + Vite 7 + TypeScript web client is now the default at `/musique/`
+- Legacy vanilla client preserved at `/musique-legacy/`
+- Queue editing (move/remove), download removal, error boundary and typed audio engine
+- Docker/CI now build and ship the React client
+
 ## v1.19.0 - 2026-11-24
 - HLS: unavailable tracks now produce a silent segment instead of a 502, so the native queue keeps advancing
 - HLS segment URLs carry the track duration for accurate fallback segments

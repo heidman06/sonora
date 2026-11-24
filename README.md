@@ -37,22 +37,21 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 
 The app UI is available in English (default), French and Spanish; the documentation is in English. Screenshots use a demo account.
 
-## React client (preview)
+## React client
 
-The next-generation web client lives in `frontend/`: **React 19 + Vite 7 + TypeScript strict**.
-It is currently served in parallel at `/musique-next/`; the legacy client remains the default at `/musique/`.
+The web client lives in `frontend/`: **React 19 + Vite 7 + TypeScript strict**, with the legacy vanilla client preserved at `/musique-legacy/` as a rollback path. The prebuilt client is shipped in `web/`; `frontend/` remains the source of truth.
 
 ```bash
 npm --prefix frontend install
-npm --prefix frontend run dev   # http://127.0.0.1:5174/musique-next/
+npm --prefix frontend run dev   # http://127.0.0.1:5174/musique/
 npm --prefix frontend run build
 ```
 
-The Docker image builds the React client automatically and ships it as `/app/web-next`.
+The Docker image ships the prebuilt React client in `/app/web` and the legacy client in `/app/web-legacy`.
 
 ## Architecture
 
-    web/ (static PWA)  ->  Node hub (API /api/mus, /subsonic/rest, /musique/dl)
+    web/ (built React client)  ->  Node hub (API /api/mus, /subsonic/rest, /musique/dl)
                                 |
                                 +- server/musique.mjs (auth, playlists, likes, history, recos, Mix)
                                 +- server/subsonic.mjs (CarPlay gateway)

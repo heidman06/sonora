@@ -1,5 +1,5 @@
 'use strict';
-/* Sonora ↔ /api/mus backend + UX tweaks (Spotify-like library) */
+/* Sonora ↔ backend /api/mus + retouches UX (bibliothèque façon Spotify) */
 (function () {
   var PIPED = '/api/piped';
   var MUS = '/api/mus';
@@ -33,7 +33,7 @@
 
   function piped(path, opts) {
     opts = opts || {};
-    var h = {}; /* never our token: Piped does not need it */
+    var h = {}; /* jamais notre token : Piped n'en veut pas */
     return fetch(PIPED + path, {
       method: opts.method || 'GET',
       headers: opts.body ? { 'Content-Type': 'application/json' } : h,
@@ -98,7 +98,7 @@
     document.head.appendChild(st);
   }
 
-  /* ---------- account synchronization ---------- */
+  /* ---------- synchronisation du compte ---------- */
   var syncFait = '';
   function synchroniser(force) {
     var u = S().user, t = tok();
@@ -126,7 +126,7 @@
         try { STORE.set(ukey('recent'), fusion); } catch (e) {}
       }
       marquerLikes();
-      // single view refresh, and only if the "For You" row is empty
+      // un seul rafraîchissement de la vue, et seulement si la rangée « Para ti » est vide
       var fy = document.getElementById('foryou-row');
       var vide = fy && fy.children.length === 0;
       if (vide && !window._fyRafraichi) {
@@ -151,7 +151,7 @@
     });
   }
 
-  /* ---------- engine overrides ---------- */
+  /* ---------- surcharges moteur ---------- */
   function brancher() {
     var X = window.Sonora;
     if (!X || X._musBranche) return;
@@ -232,7 +232,7 @@
   }, true);
 
 
-  /* ---------- favorites: single row + dedicated view ---------- */
+  /* ---------- favoris : une seule ligne + vue dédiée ---------- */
   function masquerFavsNatif() {
     var natif = document.getElementById('fav-list');
     if (!natif) return;
@@ -324,7 +324,7 @@
   }
 
 
-  /* ---------- library sorting (Recent / A-Z) ---------- */
+  /* ---------- tri de la bibliothèque (Récents / A-Z) ---------- */
   var TRI_KEY = 'mus.sort';
   function triMode() { try { return localStorage.getItem(TRI_KEY) || 'recent'; } catch (e) { return 'recent'; } }
   function setTriMode(m) { try { localStorage.setItem(TRI_KEY, m); } catch (e) {} }
@@ -400,7 +400,7 @@
     });
   }
 
-  /* ---------- + button in player ---------- */
+  /* ---------- bouton + dans le lecteur ---------- */
   function boutonAjout() {
     var barre = document.querySelector('.player-foot') || document.querySelector('.foot');
     if (!barre || document.getElementById('btn-addpl')) return;
@@ -427,7 +427,7 @@
     barre.appendChild(btn);
   }
 
-  /* ---------- delete playlist from its page ---------- */
+  /* ---------- supprimer la liste depuis sa page ---------- */
   function boutonSupprHero() {
     var actions = document.querySelector('.pl-actions');
     if (!actions || actions.querySelector('.pl-danger')) return;

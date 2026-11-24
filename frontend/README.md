@@ -1,6 +1,6 @@
 # Sonora frontend (React + Vite + TypeScript)
 
-This is the next-generation web client. It is served in parallel at **/musique-next/** until feature parity is verified; the legacy client remains at **/musique/**.
+This is the production web client, served at **/musique/**. The legacy vanilla client is kept at **/musique-legacy/** for rollback.
 
 ## Stack
 - React 19 + TypeScript strict
@@ -11,7 +11,7 @@ This is the next-generation web client. It is served in parallel at **/musique-n
 ## Development
 ```bash
 npm install
-npm run dev          # http://127.0.0.1:5174/musique-next/
+npm run dev          # http://127.0.0.1:5174/musique/
 npm run typecheck
 npm run build
 ```
@@ -30,4 +30,4 @@ The dev server proxies `/api`, `/musique/dl` and `/musique/hls` to the productio
 - [x] Queue reorder/remove
 - [ ] Full visual parity on all breakpoints
 - [x] Queue reorder/remove and download removal
-- [ ] Production switch from /musique/ to React client
+- [x] Production switch from /musique/ to React client

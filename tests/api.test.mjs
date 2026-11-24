@@ -81,6 +81,14 @@ test('page PWA', async () => {
   const r = await fetch(BASE + '/musique/');
   assert.equal(r.status, 200);
   const html = await r.text();
+  assert.ok(html.includes('id="root"'));
+  assert.match(html, /\/musique\/assets\/.*\.js/);
+});
+
+test('legacy page is preserved', async () => {
+  const r = await fetch(BASE + '/musique-legacy/');
+  assert.equal(r.status, 200);
+  const html = await r.text();
   assert.ok(html.includes('app.js'));
   assert.ok(html.includes('engine.js'));
 });
