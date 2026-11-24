@@ -230,6 +230,23 @@
 .pl-title-row .h1 { flex: 1; min-width: 0; }
 .pl-title-row .icon-btn { flex: none; margin-top: 8px; }
 @media (max-width: 400px) { .track { gap: 8px; } .track-dur { min-width: 34px; text-align: right; } }
+/* Verre Apple : hairline translucide + highlight interne + ombre douce sur tous les boutons du lecteur */
+.sheet-close, .ctl:not(.main), .foot-btn, .vol-ico {
+  background: var(--glass-2);
+  border: 1px solid var(--glass-line);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 8px 22px rgba(0,0,0,.28);
+}
+.ctl:not(.main) { border-radius: 50%; }
+.ctl.small.on, .foot-btn.on {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--glass-2));
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.foot-label { color: var(--txt-2); }
+.queue-btn { margin-top: 10px; }
+@media (max-width: 400px) { .player-art { width: min(56vw, 230px); } }
 .mix-art { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100%; aspect-ratio: 1; border-radius: 18px; overflow: hidden; background: var(--surface-2); }
 .mix-art img { width: 100%; height: 100%; object-fit: cover; }
 .mix-art-empty { background: var(--surface-2); }

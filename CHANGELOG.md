@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.4.6 - 2026-11-25
+- Lecteur : refonte verre Apple — bouton fermer dégagé des bords (inset 16/12 + safe-area), pochette réduite (58vw/260 px, 56vw/230 ≤400 px) pour rendre de l'espace vertical, contrôles et actions en verre translucide (hairline, highlight interne, blur saturé, ombre douce), état actif teinté accent, espacements resserrés (meta 18, controls 14, player 8)
+
 ## v2.4.5 - 2026-11-25
 - Lecteur mobile : la rangée de 7 actions ne déborde plus — grille 4+3 cellules avec libellés courts (Aimer/Ajouter/Paroles/Sommeil/Vitesse/Radio/Offline) ×3 ; sur ≥700 px une seule rangée d'icônes sans libellés ; icône ondes dédiée pour la radio (plus de confusion avec l'onglet Écouter)
 
