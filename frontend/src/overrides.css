@@ -15,3 +15,8 @@
 .q-row .track-title, .q-row .track-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .q-row .track-dur { flex: none; margin-left: auto; opacity: .55; font-size: 12px; }
 .queue-sheet .queue-list { padding: 0 4px 20px; }
+.tremove { flex: none; width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: var(--txt-3); display: grid; place-items: center; cursor: pointer; }
+.tremove:hover { color: #ff8fa3; background: rgba(255,77,109,.12); }
+.q-row .q-tools { display: flex; align-items: center; gap: 2px; flex: none; }
+.q-row .q-btn { width: 26px; height: 26px; border-radius: 8px; border: 0; background: transparent; color: var(--txt-3); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.q-row .q-btn:hover { background: rgba(255,255,255,.08); color: var(--txt); }

@@ -27,6 +27,7 @@ The dev server proxies `/api`, `/musique/dl` and `/musique/hls` to the productio
 - [x] Playlist and artist pages
 - [x] Player, queue, seek, volume, repeat/shuffle, MediaSession
 - [x] Offline downloads (IndexedDB)
-- [ ] Queue reorder/remove
+- [x] Queue reorder/remove
 - [ ] Full visual parity on all breakpoints
+- [x] Queue reorder/remove and download removal
 - [ ] Production switch from /musique/ to React client

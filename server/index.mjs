@@ -15,6 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.SONORA_PORT || process.env.PORT || 3011);
 const HOST = process.env.SONORA_HOST || '127.0.0.1';
 const WEB = process.env.SONORA_WEB || join(__dirname, '..', 'web');
+const WEB_NEXT = process.env.SONORA_WEB_NEXT || join(__dirname, '..', 'web-next');
 const PIPED = (process.env.PIPED_URL || '').replace(/\/$/, '');
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -33,10 +34,11 @@ function injecter(html) {
   return html;
 }
 
-function servirStatique(res, rel) {
+function servirStatique(res, rel, racine) {
+  const root = racine || WEB;
   const clean = normalize(rel).replace(/^(\.\.[/\\])+/, '');
-  const f = join(WEB, clean);
-  if (!f.startsWith(WEB)) { res.writeHead(403).end('forbidden'); return true; }
+  const f = join(root, clean);
+  if (!f.startsWith(root)) { res.writeHead(403).end('forbidden'); return true; }
   if (!existsSync(f) || !statSync(f).isFile()) return false;
   const type = MIME[extname(f).toLowerCase()] || 'application/octet-stream';
   const data = readFileSync(f);
@@ -80,6 +82,12 @@ const server = http.createServer(async (req, res) => {
     if (await handleAudio(req, res, path)) return;
     if (path.startsWith('/api/piped/')) { await proxyPiped(req, res, path.slice('/api/piped'.length), url.search); return; }
 
+    if (path === '/musique-next') { res.writeHead(302, { Location: '/musique-next/' }).end(); return; }
+    if (path === '/musique-next/' || path === '/musique-next/index.html') {
+      try { const corps = readFileSync(join(WEB_NEXT, 'index.html')); res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Length': corps.length }).end(corps); } catch (e) { res.writeHead(404).end('not found'); }
+      return;
+    }
+    if (path.startsWith('/musique-next/')) { if (servirStatique(res, path.slice('/musique-next/'.length), WEB_NEXT)) return; res.writeHead(404).end('not found'); return; }
     if (path === '/musique') { res.writeHead(302, { Location: '/musique/' }).end(); return; }
     if (path === '/musique/' || path === '/musique/index.html') {
       const html = injecter(readFileSync(join(WEB, 'index.html'), 'utf8'));

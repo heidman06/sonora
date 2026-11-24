@@ -131,7 +131,7 @@ export function LibraryView({ lang, state, onPlay, onLike, onDeletePlaylist }: P
             <TrackRow key={download.id} track={download} queue={state.downloads} index={state.downloads.indexOf(download)}
               onPlay={onPlay} liked={state.likes.some((x) => x.id === download.id)}
               onLike={onLike} isCurrent={state.current?.id === download.id}
-              durationLabel={(s) => formatTime(s)} />
+              durationLabel={(s) => formatTime(s)} onRemove={(track) => { void import('../audio/engine').then(({ engine }) => engine.removeDownload(track.id)) }} />
           ))}
           {!state.downloads.length && <div className="empty">{tr(lang, 'noDownloads')}</div>}
         </div>

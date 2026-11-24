@@ -456,11 +456,48 @@ export class PlayerEngine {
     this.patch({ repeat: next })
   }
 
+  removeFromQueue(index: number): void {
+    const queue = this.state.queue.slice()
+    if (index < 0 || index >= queue.length) return
+    const wasCurrent = this.state.current?.id === queue[index]?.id
+    queue.splice(index, 1)
+    let current = this.state.current
+    const currentId = current?.id
+    let qi = currentId ? queue.findIndex((t) => t.id === currentId) : -1
+    if (wasCurrent) {
+      qi = Math.min(index, queue.length - 1)
+      current = queue[qi] || null
+    } else if (qi < 0) qi = 0
+    this.patch({ queue, current })
+    this.persistQueue()
+    if (wasCurrent) {
+      if (current) void this.playTrack(current, queue, qi)
+      else { this.media.pause(); this.patch({ playing: false }) }
+    } else if (this.hls.active && current) {
+      void this.startHls(qi)
+    }
+  }
+
+  moveQueue(from: number, to: number): void {
+    const queue = this.state.queue.slice()
+    if (from === to || from < 0 || to < 0 || from >= queue.length || to >= queue.length) return
+    const [track] = queue.splice(from, 1)
+    queue.splice(to, 0, track)
+    const current = this.state.current
+    const qi = current ? queue.findIndex((t) => t.id === current.id) : -1
+    this.patch({ queue })
+    this.persistQueue()
+    if (this.hls.active && qi >= 0) void this.startHls(qi)
+  }
+
   toggleShuffle(): void {
     const shuffle = !this.state.shuffle
     const queue = shuffle ? [...this.state.queue].sort(() => Math.random() - 0.5) : this.state.queue
+    const current = this.state.current
+    const qi = current ? queue.findIndex((t) => t.id === current.id) : -1
     this.patch({ shuffle, queue })
     this.persistQueue()
+    if (this.hls.active && qi >= 0) void this.startHls(qi)
   }
 
   async downloadTrack(track: Track): Promise<void> {
