@@ -106,6 +106,13 @@ var unlocked = false;
 var intentPlay = false;
 var HLS = { active: false, queue: [], durs: [], offsets: [] };
 var hlsDesactive = false;
+var SONORA_BUILD = '1.19.0';
+function tracer(event, extra) {}
+function supporteHls() {
+  if (hlsDesactive) return false;
+  if (IS_IOS) return true;
+  try { return document.createElement('audio').canPlayType('application/vnd.apple.mpegurl') !== ''; } catch (e) { return false; }
+}
 var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function streamEl() { return IS_IOS ? mediaVideo : mediaAudio; }
 function fallbackAudio(id, pos) {
@@ -427,6 +434,7 @@ function initMedia() {
     bindMedia(el);
   });
   try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch (e) {}
+
   // aucune lecture automatique au démarrage
   S.playing = false; intentPlay = false;
   [mediaVideo, mediaAudio].forEach(function (el) {
@@ -482,7 +490,7 @@ function estTelecharge(id) {
   return (S.downloads || []).some(function (x) { return x && x.id === id; });
 }
 function hlsDemarrer(index) {
-  if (!IS_IOS || hlsDesactive || !S.queue || S.queue.length < 2) return false;
+  if (!supporteHls() || !S.queue || S.queue.length < 2) return false;
   try {
     var queue = S.queue.slice(0, 60);
     var ids = [], durs = [], offsets = [], acc = 0;
@@ -506,7 +514,7 @@ function hlsDemarrer(index) {
     paintNow(); paintPlayState(); setMediaSession(); pushRecent(cur);
     prechargerSuivant();
     return true;
-  } catch (e) { HLS.active = false; return false; }
+  } catch (e) { HLS.active = false; tracer('hls-start-error', { msg: String(e && e.message || e) }); return false; }
 }
 function playTrack(track, queue, index) {
   intentPlay = true;
@@ -525,7 +533,7 @@ function playTrack(track, queue, index) {
   clearStall();
   paintNow();
   persistQueue();
-  if (IS_IOS && !hlsDesactive && !track._noHls && !estTelecharge(track.id) && S.queue.length > 1) {
+  if (supporteHls() && !track._noHls && navigator.onLine !== false && S.queue.length > 1) {
     if (hlsDemarrer(S.qi)) return;
   }
   if (!IS_IOS && !estTelecharge(track.id) && streamCache[track.id]) {
@@ -723,7 +731,7 @@ window.Sonora = {
   moveQueue: moveQueue, removeQueue: removeQueue, persistQueue: persistQueue, restoreQueue: restoreQueue,
   downloadTrack: downloadTrack, removeDownload: removeDownload, dlAll: dlAll,
   suggest: suggest, searchPage: searchPage, channel: channel,
-  getCur: function () { return cur; }, prefetch: prefetch, unlockMedia: unlockMedia,
+  getCur: function () { return cur; }, prefetch: prefetch, unlockMedia: unlockMedia, build: SONORA_BUILD,
   accounts: accounts, setActiveUser: setActiveUser, signOut: signOut, register: register,
   loadUserData: loadUserData, setVolume: setVolume
 };

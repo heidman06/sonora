@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.19.0 - 2026-11-24
+- HLS: unavailable tracks now produce a silent segment instead of a 502, so the native queue keeps advancing
+- HLS segment URLs carry the track duration for accurate fallback segments
+
 ## v1.18.0 - 2026-11-24
 - iOS background playback: native HLS queue (`/musique/hls/index.m3u8`) so tracks advance with the screen locked
 - On-demand HLS audio segments generated with ffmpeg and cached

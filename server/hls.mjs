@@ -62,6 +62,24 @@ function genererTs(id, d, port, ffmpeg) {
   return p;
 }
 
+function genererSilence(id, d, ffmpeg, duree) {
+  const dest = join(d, id + '.ts');
+  if (existsSync(dest) && statSync(dest).size > 1000) return Promise.resolve(dest);
+  const tmp = dest + '.silence.part';
+  return new Promise((resolve, reject) => {
+    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-t', String(duree), '-c:a', 'aac', '-b:a', '48k', '-f', 'mpegts', tmp], { stdio: 'ignore' });
+    const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 30000);
+    ff.on('close', (code) => {
+      clearTimeout(minuteur);
+      try {
+        if (code === 0 && statSync(tmp).size > 1000) { renameSync(tmp, dest); resolve(dest); }
+        else { try { unlinkSync(tmp); } catch (e) {} reject(new Error('silence')); }
+      } catch (e) { reject(e); }
+    });
+    ff.on('error', (e) => { clearTimeout(minuteur); reject(e); });
+  });
+}
+
 function servirFichier(req, res, fichier) {
   const taille = statSync(fichier).size;
   const portee = req.headers.range;
@@ -99,7 +117,7 @@ export async function handleHls(req, res, path, url, opts) {
     });
     const cible = Math.max.apply(null, durs);
     const lignes = ['#EXTM3U', '#EXT-X-VERSION:3', '#EXT-X-TARGETDURATION:' + cible, '#EXT-X-MEDIA-SEQUENCE:0', '#EXT-X-PLAYLIST-TYPE:VOD'];
-    ids.forEach((id, i) => { lignes.push('#EXTINF:' + durs[i] + '.000,'); lignes.push('/musique/hls/seg/' + id + '.ts'); });
+    ids.forEach((id, i) => { lignes.push('#EXTINF:' + durs[i] + '.000,'); lignes.push('/musique/hls/seg/' + id + '.ts?d=' + durs[i]); });
     lignes.push('#EXT-X-ENDLIST');
     res.writeHead(200, { 'Content-Type': 'application/vnd.apple.mpegurl; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(lignes.join('\n') + '\n');
@@ -110,11 +128,18 @@ export async function handleHls(req, res, path, url, opts) {
   if (m) {
     const id = m[1];
     const d = dossierTs(dataDir);
+    const n = Number(url.searchParams.get('d'));
+    const duree = Number.isFinite(n) && n >= 5 ? Math.min(3600, Math.round(n)) : 240;
     try {
-      const f = await genererTs(id, d, port, ffmpeg);
+      const f = await genererTs(id, d, port, ffmpeg, duree);
       servirFichier(req, res, f);
     } catch (e) {
-      res.writeHead(502, { 'Content-Type': 'text/plain' }).end('segment indisponible');
+      try {
+        const f = await genererSilence(id, d, ffmpeg, duree);
+        servirFichier(req, res, f);
+      } catch (e2) {
+        res.writeHead(502, { 'Content-Type': 'text/plain' }).end('segment indisponible');
+      }
     }
     return true;
   }

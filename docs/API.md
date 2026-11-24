@@ -38,7 +38,7 @@ Accounts are defined in the server data directory (musique-users.txt, chmod 600)
 
     GET  /musique/dl/:videoId                 -> audio stream / Range 206
     GET  /musique/hls/index.m3u8?ids=&durs=    -> HLS queue playlist (iOS background)
-    GET  /musique/hls/seg/:videoId.ts         -> HLS audio segment (generated on demand)
+    GET  /musique/hls/seg/:videoId.ts?d=sec  -> HLS audio segment (silent fallback if unavailable)
 
 ## Notes
 

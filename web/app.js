@@ -361,7 +361,8 @@ function renderTracks(box, items) {
 
 /* ---------- bibliothèque ---------- */
 function langRowHtml() {
-  return '<div class="setting-row"><b>' + L('Langue', 'Idioma') + '</b><div class="seg-lang"><button data-lang="fr" class="' + (S.lang === 'fr' ? 'on' : '') + '">FR</button><button data-lang="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button><button data-lang="es" class="' + (S.lang === 'es' ? 'on' : '') + '">ES</button></div></div>';
+  return '<div class="setting-row"><b>Version</b><span style="opacity:.65;font-size:13px">' + esc((X && X.build) || '1.18.1') + ' · HLS</span></div>'
+    + '<div class="setting-row"><b>' + L('Langue', 'Idioma') + '</b><div class="seg-lang"><button data-lang="fr" class="' + (S.lang === 'fr' ? 'on' : '') + '">FR</button><button data-lang="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button><button data-lang="es" class="' + (S.lang === 'es' ? 'on' : '') + '">ES</button></div></div>';
 }
 function accountsBar() {
   var list = X.accounts();
