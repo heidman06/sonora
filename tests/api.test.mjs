@@ -57,6 +57,19 @@ test.after(() => {
   try { rmSync(DATA, { recursive: true, force: true }); } catch (e) {}
 });
 
+test('HLS queue playlist', async () => {
+  const r = await fetch(BASE + '/musique/hls/index.m3u8?ids=dQw4w9WgXcQ,mqgEYRtWMJU&durs=213,95');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type') || '', /mpegurl/);
+  const txt = await r.text();
+  assert.match(txt, /#EXTM3U/);
+  assert.match(txt, /#EXTINF:213\.000/);
+  assert.match(txt, /\/musique\/hls\/seg\/dQw4w9WgXcQ\.ts/);
+  assert.match(txt, /\/musique\/hls\/seg\/mqgEYRtWMJU\.ts/);
+  const bad = await fetch(BASE + '/musique/hls/index.m3u8?ids=bad');
+  assert.equal(bad.status, 400);
+});
+
 test('health public', async () => {
   const r = await api('/api/mus/health');
   assert.equal(r.status, 200);

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.18.0 - 2026-11-24
+- iOS background playback: native HLS queue (`/musique/hls/index.m3u8`) so tracks advance with the screen locked
+- On-demand HLS audio segments generated with ffmpeg and cached
+- Automatic fallback to per-track audio if HLS is unavailable
+
 ## v1.17.2 - 2026-11-24
 - Background playback: tracks now advance synchronously on ended (no async IndexedDB wait)
 - Prefetch of the next two tracks for faster transitions and iOS background

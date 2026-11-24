@@ -19,7 +19,8 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 - **Real durations** for playlists, likes, history and Subsonic
 - **Multi-account**: scrypt passwords, bearer sessions, per-account isolation
 - **Security**: 30-day session TTL, server-side logout revocation, input validation
-- **Mobile-first PWA**: English (default), French and Spanish UI, light/dark theme, iOS background audio
+- **Mobile-first PWA**: English (default), French and Spanish UI, light/dark theme
+- **iOS background playback**: native HLS queue so tracks keep advancing when the PWA is backgrounded or the screen is locked
 
 ## Screenshots
 

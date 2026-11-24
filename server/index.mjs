@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { handleMusique } from './musique.mjs';
 import { handleAudio } from './audio.mjs';
 import { handleSubsonic } from './subsonic.mjs';
+import { handleHls } from './hls.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.SONORA_PORT || process.env.PORT || 3011);
@@ -74,6 +75,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }).end('<h1>Sonora · Subsonic</h1><p>Base API : <code>/subsonic/rest</code></p>');
       return;
     }
+    if (path.startsWith('/musique/hls/')) { await handleHls(req, res, path, url, { port: PORT, dataDir: process.env.SONORA_DATA || join(__dirname, '..', 'data'), ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg' }); return; }
     if (path.startsWith('/subsonic/rest')) { await handleSubsonic(req, res, path, url); return; }
     if (await handleAudio(req, res, path)) return;
     if (path.startsWith('/api/piped/')) { await proxyPiped(req, res, path.slice('/api/piped'.length), url.search); return; }
