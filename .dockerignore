@@ -1,0 +1,11 @@
+.git
+.github
+data
+node_modules
+tests
+docs
+.env
+.env.*
+*.log
+*.db
+*.m4a

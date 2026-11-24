@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Syntaxe
+        run: npm run check
+      - name: Tests unitaires et API
+        run: npm test
+      - name: Démarrage serveur autonome
+        run: |
+          export SONORA_DATA=$(mktemp -d)
+          export SONORA_HOST=127.0.0.1
+          export SONORA_PORT=3311
+          node server/index.mjs &
+          SERVER_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3311/api/mus/health > /tmp/health.json; then break; fi
+            sleep 0.5
+          done
+          cat /tmp/health.json
+          node -e "const h=require('/tmp/health.json');if(!h.ok)process.exit(1)"
+          curl -fsS -o /dev/null http://127.0.0.1:3311/musique/
+          kill $SERVER_PID
