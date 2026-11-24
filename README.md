@@ -34,7 +34,7 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
   </tr>
 </table>
 
-The app UI is available in English (default), French and Spanish; the documentation is in English.
+The app UI is available in English (default), French and Spanish; the documentation is in English. Screenshots use a demo account.
 
 ## Architecture
 

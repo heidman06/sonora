@@ -106,11 +106,12 @@ var unlocked = false;
 var intentPlay = false;
 var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function streamEl() { return IS_IOS ? mediaVideo : mediaAudio; }
-function fallbackAudio(id) {
+function fallbackAudio(id, pos) {
   if (!id) return;
   setBlob('');
   useMedia(mediaAudio);
   media.src = location.origin + '/musique/dl/' + encodeURIComponent(id);
+  if (pos > 0) media.addEventListener('loadedmetadata', function () { try { media.currentTime = pos; } catch (e) {} }, { once: true });
   media.play().catch(function () {});
   paintPlayState();
 }
@@ -276,9 +277,52 @@ function loadPlaylists() {
 
 /* ---------- lecteur ---------- */
 var mediaVideo = null, mediaAudio = null;
+var stallTimer = null;
+var skipTimer = null;
+function clearStall() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
+function skipBroken() {
+  if (skipTimer) return;
+  if (!S.queue || S.queue.length < 2) { toast('Lecture impossible pour ce titre'); return; }
+  toast('Titre indisponible — passage au suivant');
+  skipTimer = setTimeout(function () {
+    skipTimer = null;
+    if (!cur) return;
+    S._skipCount = (S._skipCount || 0) + 1;
+    if (S._skipCount > 5) { toast('Lecture impossible'); return; }
+    playNext(true);
+  }, 700);
+}
+function recoverPlayback(el, pos) {
+  if (!cur || media !== el) return;
+  var src = String(el.src || '');
+  var onServer = src.indexOf('/musique/dl/') >= 0;
+  if (onServer && (el._recoverTries || 0) >= 1) { skipBroken(); return; }
+  el._recoverTries = (el._recoverTries || 0) + 1;
+  setBlob('');
+  useMedia(mediaAudio);
+  try { media.pause(); } catch (e) {}
+  media.src = location.origin + '/musique/dl/' + encodeURIComponent(cur.id) + '?r=' + Date.now();
+  media.addEventListener('loadedmetadata', function () { try { media.currentTime = Math.max(0, pos || 0); } catch (e) {} media.play().catch(function () {}); }, { once: true });
+  try { media.load(); } catch (e) {}
+  media.play().catch(function () {});
+  toast('Reconnexion…');
+  armerWatchdog(media);
+}
+function armerWatchdog(el) {
+  if (media !== el || el.paused || !intentPlay) return;
+  clearStall();
+  var t0 = el.currentTime;
+  stallTimer = setTimeout(function () {
+    stallTimer = null;
+    if (media !== el || el.paused || !intentPlay) return;
+    if (Math.abs(el.currentTime - t0) > 0.3) { armerWatchdog(el); return; }
+    recoverPlayback(el, t0);
+  }, 9000);
+}
 function bindMedia(el) {
   el.addEventListener('timeupdate', function () {
     if (media !== el || seekDragging) return;
+    if (el._lastTick !== el.currentTime) { el._lastTick = el.currentTime; if ((el._recoverTries || 0) > 0) el._recoverTries = 0; clearStall(); }
     var d = el.duration || (cur && cur.duration) || 0;
     var p = d ? (el.currentTime / d) * 1000 : 0;
     $('#seek').value = String(p);
@@ -286,8 +330,11 @@ function bindMedia(el) {
     $('#t-cur').textContent = fmt(el.currentTime);
     $('#t-dur').textContent = fmt(d);
   });
-  el.addEventListener('play', function () { if (media === el) { S.playing = true; paintPlayState(); } });
-  el.addEventListener('pause', function () { if (media === el) { S.playing = false; paintPlayState(); } });
+  el.addEventListener('play', function () { if (media === el) { S.playing = true; el._recoverTries = 0; S._skipCount = 0; paintPlayState(); } });
+  el.addEventListener('playing', function () { if (media === el) { clearStall(); el._recoverTries = 0; paintPlayState(); } });
+  el.addEventListener('pause', function () { if (media === el) { S.playing = false; clearStall(); paintPlayState(); } });
+  el.addEventListener('waiting', function () { if (media === el && intentPlay) armerWatchdog(el); });
+  el.addEventListener('stalled', function () { if (media === el && intentPlay) armerWatchdog(el); });
   el.addEventListener('ended', function () {
     if (media !== el) return;
     if (S.repeat === 'one') { el.currentTime = 0; el.play(); return; }
@@ -295,8 +342,8 @@ function bindMedia(el) {
   });
   el.addEventListener('error', function () {
     if (media !== el) return;
-    if (cur && !el._fallbackTried) { el._fallbackTried = true; fallbackAudio(cur.id); return; }
-    toast('Lecture impossible pour ce titre');
+    if (cur && !el._fallbackTried) { el._fallbackTried = true; fallbackAudio(cur.id, el.currentTime || 0); return; }
+    skipBroken();
   });
 }
 function useMedia(el) {
@@ -390,6 +437,10 @@ function playTrack(track, queue, index) {
   cur = track;
   mediaVideo._fallbackTried = false;
   mediaAudio._fallbackTried = false;
+  mediaVideo._recoverTries = 0;
+  mediaAudio._recoverTries = 0;
+  S._skipCount = 0;
+  clearStall();
   paintNow();
   persistQueue();
   if (!IS_IOS && !estTelecharge(track.id) && streamCache[track.id]) {

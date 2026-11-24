@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.17.1 - 2026-11-24
+- Playback resilience: stall watchdog, automatic recovery and skip of unavailable tracks
+- Anonymized screenshots (demo account, no personal playlist names)
+
 ## v1.17.0 - 2026-11-24
 - English UI added and set as the default language on first launch
 - Language switch now cycles English, Spanish and French
