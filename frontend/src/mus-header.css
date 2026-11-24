@@ -1,0 +1,43 @@
+/* Header: logo left, language + theme pinned to the far right. */
+.top-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  justify-content: flex-start !important;
+}
+.top-row .brand { margin-right: auto !important; min-width: 0 !important; }
+.top-row #lang-btn { margin-left: auto !important; margin-right: 0 !important; flex: 0 0 auto !important; }
+.top-row #theme-btn { margin-left: 0 !important; margin-right: 0 !important; flex: 0 0 auto !important; }
+
+#lang-btn {
+  width: auto !important;
+  height: 38px !important;
+  padding: 0 13px !important;
+  border-radius: 999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12.5px !important;
+  font-weight: 750 !important;
+  letter-spacing: .02em !important;
+  background: rgba(255,255,255,.09) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+}
+#theme-btn {
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  border-radius: 999px !important;
+  display: grid !important;
+  place-items: center !important;
+  background: rgba(255,255,255,.09) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+}
+
+#mix-btn{display:inline-flex;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.05));color:var(--txt,#fff);font-weight:650;font-size:13px;padding:7px 13px;border-radius:999px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.22);transition:transform .16s ease,background .16s ease}
+#mix-btn:active{transform:scale(.96);background:linear-gradient(135deg,rgba(255,255,255,.22),rgba(255,255,255,.08))}
+
+.fy-item{position:relative;flex:0 0 auto;display:block}
+.fy-hide{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.58);color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);cursor:pointer;z-index:4;opacity:.8;padding:0}
+.fy-hide:active{transform:scale(.92);opacity:1}

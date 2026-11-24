@@ -13,6 +13,9 @@
     "check": "node --check server/musique.mjs && node --check server/audio.mjs && node --check server/index.mjs && node --check server/musique-resolve.mjs && node --check server/musique-import.mjs",
     "test": "node --test tests/*.test.mjs",
     "smoke": "node server/smoke.mjs",
-    "load": "node scripts/load-test.mjs"
+    "load": "node scripts/load-test.mjs",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:check": "npm --prefix frontend run typecheck"
   }
 }
