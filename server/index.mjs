@@ -27,7 +27,7 @@ const pipedCache = new Map();
 function injecter(html) {
   if (!html.includes('mus-header.css')) html = html.replace('</head>', '<link rel="stylesheet" href="mus-header.css?v=3">' + String.fromCharCode(10) + '</head>');
   if (!html.includes('mus-queue.css')) html = html.replace('</head>', '<link rel="stylesheet" href="mus-queue.css?v=1">' + String.fromCharCode(10) + '</head>');
-  if (!html.includes('mus-i18n.js')) html = html.replace('</body>', '<script src="mus-i18n.js?v=1" defer></script>' + String.fromCharCode(10) + '</body>');
+  if (!html.includes('mus-i18n.js')) html = html.replace('</body>', '<script src="mus-i18n.js?v=2" defer></script>' + String.fromCharCode(10) + '</body>');
   if (!html.includes('mus-integration.js')) html = html.replace('</body>', '<script src="mus-integration.js?v=6" defer></script>' + String.fromCharCode(10) + '</body>');
   return html;
 }

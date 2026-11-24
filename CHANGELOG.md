@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.17.0 - 2026-11-24
+- English UI added and set as the default language on first launch
+- Language switch now cycles English, Spanish and French
+- Fixed mobile bottom navigation alignment (equal-width, centered icons)
+- English screenshots refreshed
+
 ## v1.16.2 - 2026-11-24
 - Added banner and fresh mobile/desktop screenshots to the README
 - Translated all source-code comments to English

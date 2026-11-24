@@ -1,4 +1,4 @@
-/* Sonora - engine: Piped API, player, favorites, downloads, queues. */
+/* Sonora — moteur : API Piped, lecteur, favoris, téléchargements, files. */
 'use strict';
 
 var API = location.protocol + '//' + location.hostname + ':8480';
@@ -47,7 +47,7 @@ var STORE = {
 var S = {
   token: STORE.get('token', ''),
   user: STORE.get('user', ''),
-  lang: STORE.get('lang', 'fr'),
+  lang: STORE.get('lang', 'en'),
   playlists: [],
   queue: [],
   qi: -1,
@@ -116,7 +116,7 @@ function fallbackAudio(id) {
 }
 var favPlaylistId = '';
 
-/* ---------- IndexedDB downloads ---------- */
+/* ---------- IndexedDB téléchargements ---------- */
 var DB = null;
 function dbOpen() {
   if (DB) return DB;
@@ -225,7 +225,7 @@ function pushRecent(t) {
   STORE.set(ukey('recent'), S.recent);
 }
 
-/* ---------- favorites ---------- */
+/* ---------- favoris ---------- */
 function isFav(id) { return S.favs.some(function (x) { return x.id === id; }); }
 function toggleFav(track) {
   if (!track || !track.id) return false;
@@ -274,7 +274,7 @@ function loadPlaylists() {
   return api('/user/playlists').then(function (l) { S.playlists = l || []; return S.playlists; });
 }
 
-/* ---------- player ---------- */
+/* ---------- lecteur ---------- */
 var mediaVideo = null, mediaAudio = null;
 function bindMedia(el) {
   el.addEventListener('timeupdate', function () {
@@ -325,7 +325,7 @@ function initMedia() {
     bindMedia(el);
   });
   try { if ('audioSession' in navigator) navigator.audioSession.type = 'playback'; } catch (e) {}
-  // no autoplay at startup
+  // aucune lecture automatique au démarrage
   S.playing = false; intentPlay = false;
   [mediaVideo, mediaAudio].forEach(function (el) {
     if (!el) return;
@@ -493,7 +493,7 @@ function setMediaSession() {
   } catch (e) {}
 }
 
-/* ---------- download ---------- */
+/* ---------- téléchargement ---------- */
 function downloadTrack(track) {
   if (!track || !track.id) return Promise.reject(new Error('titre'));
   toast('Téléchargement en cours…');
@@ -512,7 +512,7 @@ function removeDownload(id) {
   return dlDel(id).then(function () { return dlAll(); }).then(function (all) { S.downloads = all; toast('Supprimé'); });
 }
 
-/* ---------- search / discovery ---------- */
+/* ---------- recherche / découverte ---------- */
 function suggest(q) { return api('/suggestions?query=' + encodeURIComponent(q)).catch(function () { return []; }); }
 function searchPage(q, filter, nextpage) {
   var u = '/search?q=' + encodeURIComponent(q) + '&filter=' + (filter || 'music_songs');

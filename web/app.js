@@ -1,4 +1,4 @@
-/* Sonora - full interface: routes, i18n, favorites, queues, artists. */
+/* Sonora — interface complète : routes, i18n, favoris, files, artistes. */
 'use strict';
 
 var X = window.Sonora;
@@ -9,7 +9,7 @@ var NEXT = '';
 var PLVIEW = { tracks: [], id: '' };
 var queued = false;
 
-function L(fr, es) { return S.lang === 'es' ? es : fr; }
+function L(fr, es) { if (S.lang === 'es') return es; if (S.lang === 'en') return EN[fr] || fr; return fr; }
 function route() {
   var h = location.hash.replace(/^#\/?/, '');
   var parts = h.split('/');
@@ -63,15 +63,34 @@ var ES = {
   'Changer de thème': 'Cambiar tema', 'Fermer': 'Cerrar',
   'Mon compte': 'Mi cuenta', 'Lecture': 'Reproducción'
 };
+var EN = {"Écouter":"Listen","Rechercher":"Search","Bibliothèque":"Library","Ta musique, sans pub, sans compte à créer.":"Your music, no ads, no account required.","Ta musique.":"Your music.","Sans compromis.":"No compromise.","Le catalogue YouTube Music, une interface qui respire.":"The YouTube Music catalog, in an interface that breathes.","Lecture aléatoire":"Shuffle","Récemment écouté":"Recently played","Tes playlists":"Your playlists","Tout voir":"See all","Explorer par envie":"Explore by mood","Pour toi":"For you","Tes playlists, ici":"Your playlists, here","Connecte-toi avec ton compte Sonora pour retrouver les playlists importées de YouTube Music.":"Sign in with your Sonora account to find playlists imported from YouTube Music.","Se connecter":"Sign in","Connexion":"Sign in","Déconnexion":"Sign out","Nom d’utilisateur":"Username","Mot de passe":"Password","Favoris":"Favorites","Téléchargements":"Downloads","Charger plus":"Load more","Aucun résultat.":"No results.","Titres":"Songs","Vidéos":"Videos","Albums":"Albums","Artistes":"Artists","Tout YouTube Music, en un geste.":"All of YouTube Music, in one gesture.","Artistes, titres, albums…":"Artists, songs, albums...","Lire":"Play","Aléatoire":"Shuffle","File d'attente":"Queue","Ajouter à une playlist":"Add to playlist","Télécharger":"Download","Artiste":"Artist","Aucune playlist.":"No playlist.","File vide":"Queue empty","Langue":"Language","Nouvelle playlist…":"New playlist...","Créer":"Create","Impossible de lire ce titre":"Cannot play this track","Aucun favori pour l'instant.":"No favorites yet.","Aucun téléchargement.":"No downloads.","Accueil":"Home","Découvrir":"Discover","Changer de thème":"Change theme","Fermer":"Close","Mon compte":"My account","Lecture":"Playback","Suivant":"Next","Progression":"Progress","Tes Mix":"Your Mixes","Écoute quelques titres pour créer tes Mix.":"Listen to a few tracks to create your Mixes.","Connecte-toi pour ton Mix":"Sign in to get your Mix","Rien à lire pour le moment":"Nothing to play right now","Écoute quelques titres, cette rangée suivra tes goûts.":"Listen to a few tracks and this row will follow your taste.","d’après ":"based on ","Cherche un artiste, un titre, une ambiance.":"Search for an artist, a track, a mood.","Aucune piste disponible.":"No tracks available.","Connecte-toi d'abord":"Sign in first","Ajouté ✓":"Added ✓","Un compte par personne, chacun ses playlists et son historique.":"One account per person, each with their own playlists and history.","Connecte-toi, ou crée un compte pour ta copine : chacun garde ses playlists et son historique.":"Sign in, or create an account for your partner: everyone keeps their own playlists and history.","Remplis les deux champs.":"Fill in both fields.","Connexion…":"Signing in...","Nom déjà pris ou invalide.":"Username taken or invalid.","Identifiants refusés.":"Invalid credentials.","Tes playlists, sur tous tes appareils.":"Your playlists, on all your devices.","Mes playlists":"My playlists","Liste":"Playlist","titres":"tracks","Titres populaires":"Popular tracks","Impossible de charger cette playlist.":"Cannot load this playlist.","listes":"playlists","Créer un compte":"Create account","Ajouter un compte":"Add account","Erreur":"Error","Playlist créée":"Playlist created","Moins de ce style":"Less like this","Mix vide":"Empty mix","Mix indisponible":"Mix unavailable","Mix…":"Mix...","Téléchargé ✓":"Downloaded ✓","Téléchargement en cours…":"Downloading...","Téléchargement impossible":"Download failed","Supprimé":"Deleted","Déconnecté":"Signed out","Se déconnecter":"Sign out",
+"Nouveautés 2026":"New in 2026",
+"Top hits france":"Top hits France",
+"Workout":"Workout",
+"Voiture":"Car",
+"Soirée":"Party",
+"Concentration":"Focus",
+"Électro":"Electro",
+"Découvertes":"Discoveries",
+"En boucle":"On repeat",
+"Tes favoris":"Your favorites"
+};
 var PATTERNS = [
   [/\b(\d+)\s+titres\b/g, '$1 canciones'],
   [/\b(\d+)\s+playlists\b/g, '$1 listas'],
   [/\bArtistes\b/g, 'Artistas']
 ];
 function translateText(s) {
-  if (S.lang !== 'es') return s;
+  if (S.lang !== 'es' && S.lang !== 'en') return s;
   var trimmed = s.trim();
   if (!trimmed) return s;
+  if (S.lang === 'en') {
+    var en = EN[trimmed];
+    if (en) return s.replace(trimmed, en);
+    return s.replace(/(\d+)\s+titres\b/g, function (m, n) { return Number(n) === 1 ? '1 track' : n + ' tracks'; })
+      .replace(/(\d+)\s+listes\b/g, function (m, n) { return Number(n) === 1 ? '1 playlist' : n + ' playlists'; })
+      .replace(/(\d+)\s+playlists\b/g, function (m, n) { return Number(n) === 1 ? '1 playlist' : n + ' playlists'; });
+  }
   var out = ES[trimmed];
   if (out) return s.replace(trimmed, out);
   var r = s;
@@ -80,19 +99,20 @@ function translateText(s) {
   return r;
 }
 function translateNode(root) {
-  if (S.lang !== 'es') return;
+  if (S.lang !== 'es' && S.lang !== 'en') return;
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   var n, nodes = [];
   while ((n = walker.nextNode())) nodes.push(n);
   nodes.forEach(function (node) { var t = translateText(node.nodeValue); if (t !== node.nodeValue) node.nodeValue = t; });
   $$('input[placeholder]', root).forEach(function (i) {
     var p = i.getAttribute('placeholder');
-    if (ES[p]) i.setAttribute('placeholder', ES[p]);
+    var M = S.lang === 'es' ? ES : S.lang === 'en' ? EN : null;
+    if (M && M[p]) i.setAttribute('placeholder', M[p]);
   });
 }
 var translateTimer = null;
 function translateSoon() {
-  if (S.lang !== 'es') return;
+  if (S.lang !== 'es' && S.lang !== 'en') return;
   clearTimeout(translateTimer);
   translateTimer = setTimeout(function () {
     var app = $('#app'); if (app) translateNode(app);
@@ -100,7 +120,7 @@ function translateSoon() {
 }
 var observer = new MutationObserver(function () { translateSoon(); });
 
-/* ---------- home ---------- */
+/* ---------- accueil ---------- */
 var MOODS = [
   { q: 'phonk', fr: 'Phonk', es: 'Phonk' }, { q: 'chill lofi', fr: 'Chill', es: 'Relax' },
   { q: 'rap français', fr: 'Rap FR', es: 'Rap FR' }, { q: 'afrobeats 2026', fr: 'Afrobeats', es: 'Afrobeats' },
@@ -110,15 +130,20 @@ var MOODS = [
 function hello() {
   var h = new Date().getHours();
   if (S.lang === 'es') return h < 6 ? 'Buenas noches' : h < 12 ? 'Buenos días' : h < 18 ? 'Buenas tardes' : 'Buenas noches';
+  if (S.lang === 'en') return h < 6 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
   return h < 6 ? 'Bonne nuit' : h < 12 ? 'Bonjour' : h < 18 ? 'Bel après-midi' : 'Bonsoir';
 }
 function dateLbl() {
   var j = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   var jes = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var jen = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var m = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   var mes = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var men = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var n = new Date();
-  return (S.lang === 'es' ? jes[n.getDay()] : j[n.getDay()]) + ' ' + n.getDate() + ' ' + (S.lang === 'es' ? mes[n.getMonth()] : m[n.getMonth()]);
+  var jour = S.lang === 'es' ? jes[n.getDay()] : S.lang === 'en' ? jen[n.getDay()] : j[n.getDay()];
+  var mois = S.lang === 'es' ? mes[n.getMonth()] : S.lang === 'en' ? men[n.getMonth()] : m[n.getMonth()];
+  return jour + ' ' + n.getDate() + ' ' + mois;
 }
 function viewListen() {
   headings('');
@@ -136,7 +161,7 @@ function viewListen() {
       }).join('') + '</div></section>'
     : '<section class="section"><div class="login-card"><h3>Tes playlists, ici</h3><p>' + L('Connecte-toi avec ton compte Sonora pour retrouver les playlists importées de YouTube Music.', 'Inicia sesión con tu cuenta Sonora para recuperar las listas importadas de YouTube Music.') + '</p><a class="btn-primary" href="#/library">' + L('Se connecter', 'Iniciar sesión') + ' ' + ico('back', 14) + '</a></div></section>';
   view(
-    '<div class="chips" style="margin-top:18px">' + MOODS.map(function (m) { return '<button class="chip" data-mood="' + esc(m.q) + '">' + esc(S.lang === 'es' ? m.es : m.fr) + '</button>'; }).join('') + '</div>' +
+    '<div class="chips" style="margin-top:18px">' + MOODS.map(function (m) { return '<button class="chip" data-mood="' + esc(m.q) + '">' + esc(S.lang === 'es' ? m.es : S.lang === 'en' ? (EN[m.fr] || m.fr) : m.fr) + '</button>'; }).join('') + '</div>' +
     '<section class="section" id="mixes"><div class="section-head"><h2 class="section-title">' + L('Tes Mix', 'Tus Mix') + '</h2></div><div id="mixes-row" class="row-scroll"><div class="skel" style="width:152px;height:152px;border-radius:18px"></div><div class="skel" style="width:152px;height:152px;border-radius:18px"></div><div class="skel" style="width:152px;height:152px;border-radius:18px"></div></div></section>' +
     '<section class="section" id="for-you"><div class="section-head"><h2 class="section-title">' + L('Pour toi', 'Para ti') + '</h2><button class="section-link" id="mix-btn">✨ Mix</button></div><div id="foryou-row" class="row-scroll"><div class="skel" style="width:152px;height:152px;border-radius:18px"></div><div class="skel" style="width:152px;height:152px;border-radius:18px"></div><div class="skel" style="width:152px;height:152px;border-radius:18px"></div></div></section>' +
     recentHtml +
@@ -152,6 +177,11 @@ function viewListen() {
   var mb = $('#mix-btn');
   if (mb) mb.addEventListener('click', function (e) { e.preventDefault(); playMix(); });
 }
+function mixLabel(name) {
+  if (S.lang === 'en') return { 'Découvertes': 'Discoveries', 'En boucle': 'On repeat', 'Tes favoris': 'Your favorites' }[name] || name;
+  if (S.lang === 'es') return { 'Découvertes': 'Descubrimientos', 'En boucle': 'En bucle', 'Tes favoris': 'Tus favoritos' }[name] || name;
+  return name;
+}
 function loadMixes() {
   var row = $('#mixes-row'); if (!row) return;
   if (!X.mixes) return;
@@ -160,7 +190,7 @@ function loadMixes() {
     S._mixes = list;
     row.innerHTML = list.map(function (m) {
       var cover = (m.cover && m.cover[0]) ? 'https://i.ytimg.com/vi/' + m.cover[0] + '/mqdefault.jpg' : '';
-      return '<button class="card mix-card" data-mix="' + esc(m.key) + '"><div class="card-art-wrap"><img class="card-art" src="' + esc(cover) + '" alt="" loading="lazy" /><span class="card-play">' + ico('play', 15) + '</span></div><div class="card-title">' + esc(m.name) + '</div><div class="card-sub">' + (m.count || 0) + ' titres</div></button>';
+      return '<button class="card mix-card" data-mix="' + esc(m.key) + '"><div class="card-art-wrap"><img class="card-art" src="' + esc(cover) + '" alt="" loading="lazy" /><span class="card-play">' + ico('play', 15) + '</span></div><div class="card-title">' + esc(mixLabel(m.name)) + '</div><div class="card-sub">' + (m.count || 0) + ' titres</div></button>';
     }).join('');
   }).catch(function () { row.innerHTML = ''; });
 }
@@ -231,7 +261,7 @@ function loadForYou() {
   row.innerHTML = '';
 }
 
-/* ---------- search ---------- */
+/* ---------- recherche ---------- */
 var FILTERS = [
   { k: 'music_songs', fr: 'Titres', es: 'Canciones' },
   { k: 'music_videos', fr: 'Vidéos', es: 'Vídeos' },
@@ -242,7 +272,7 @@ function viewSearch(q) {
   q = q || S.query || '';
   headings('<h1 class="h1">' + L('Rechercher', 'Buscar') + '</h1><p class="sub">' + L('Tout YouTube Music, en un geste.', 'Todo YouTube Music, en un gesto.') + '</p>');
   view('<div class="searchbar"><span class="s-ico">' + ico('search', 19) + '</span><input id="q" type="search" placeholder="' + L('Artistes, titres, albums…', 'Artistas, canciones, álbumes…') + '" value="' + esc(q) + '" autocomplete="off" autocapitalize="off" spellcheck="false" /><div id="suggest" class="suggest" hidden></div></div>' +
-    '<div class="segmented" id="filters">' + FILTERS.map(function (f) { return '<button data-f="' + f.k + '" class="' + (S.searchFilter === f.k ? 'on' : '') + '">' + (S.lang === 'es' ? f.es : f.fr) + '</button>'; }).join('') + '</div>' +
+    '<div class="segmented" id="filters">' + FILTERS.map(function (f) { return '<button data-f="' + f.k + '" class="' + (S.searchFilter === f.k ? 'on' : '') + '">' + (S.lang === 'es' ? f.es : S.lang === 'en' ? (EN[f.fr] || f.fr) : f.fr) + '</button>'; }).join('') + '</div>' +
     '<div id="results" class="list"></div>');
   var input = $('#q');
   var timer;
@@ -329,9 +359,9 @@ function renderTracks(box, items) {
   }).join('');
 }
 
-/* ---------- library ---------- */
+/* ---------- bibliothèque ---------- */
 function langRowHtml() {
-  return '<div class="setting-row"><b>' + L('Langue', 'Idioma') + '</b><div class="seg-lang"><button data-lang="fr" class="' + (S.lang === 'fr' ? 'on' : '') + '">FR</button><button data-lang="es" class="' + (S.lang === 'es' ? 'on' : '') + '">ES</button></div></div>';
+  return '<div class="setting-row"><b>' + L('Langue', 'Idioma') + '</b><div class="seg-lang"><button data-lang="fr" class="' + (S.lang === 'fr' ? 'on' : '') + '">FR</button><button data-lang="en" class="' + (S.lang === 'en' ? 'on' : '') + '">EN</button><button data-lang="es" class="' + (S.lang === 'es' ? 'on' : '') + '">ES</button></div></div>';
 }
 function accountsBar() {
   var list = X.accounts();
@@ -413,8 +443,11 @@ function bindLang() {
 }
 function setLang(l) {
   S.lang = l; X.STORE.set('lang', l);
-  $('#lang-btn').textContent = l === 'fr' ? 'ES' : 'FR';
+  var b = $('#lang-btn'); if (b) b.textContent = l.toUpperCase();
   route();
+}
+function cycleLang() {
+  setLang(S.lang === 'fr' ? 'en' : S.lang === 'en' ? 'es' : 'fr');
 }
 function renderFavs() {
   var box = $('#fav-list'); if (!box) return;
@@ -479,7 +512,7 @@ function viewPlaylist(id) {
   }).catch(function () { view('<div class="empty">' + L('Impossible de charger cette playlist.', 'No se puede cargar esta lista.') + '</div>'); });
 }
 
-/* ---------- artist ---------- */
+/* ---------- artiste ---------- */
 function viewArtist(id) {
   if (!id) { location.hash = '#/library'; return; }
   headings('<button class="icon-btn" id="back" style="margin-bottom:14px" aria-label="Retour">' + ico('back', 18) + '</button>');
@@ -523,7 +556,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('#btn-fav')) { if (window.curTrackForFav) X.toggleFav(window.curTrackForFav); return; }
 });
 function paintFavBtn() {
-  var c = X.S; // current track exposed via engine? use window
+  var c = X.S; // current track exposes via engine? use window
 }
 window.addEventListener('hashchange', route);
 
@@ -625,9 +658,9 @@ function boot() {
   }
   $$('.tab-ico').forEach(function (s) { s.innerHTML = ico(s.getAttribute('data-ico'), 21); });
   initTheme();
-  try { initPlayerUi(); } catch (e) { /* old cached version: continue */ }
-  if ($('#lang-btn')) $('#lang-btn').textContent = S.lang === 'fr' ? 'ES' : 'FR';
-  if ($('#lang-btn')) $('#lang-btn').addEventListener('click', function () { setLang(S.lang === 'fr' ? 'es' : 'fr'); });
+  try { initPlayerUi(); } catch (e) { /* ancienne version en cache : on continue */ }
+  if ($('#lang-btn')) $('#lang-btn').textContent = S.lang.toUpperCase();
+  if ($('#lang-btn')) $('#lang-btn').addEventListener('click', cycleLang);
   X.restoreQueue();
   if (X.S.queue && X.S.queue.length) { X.paintNow(); }
   X.dlAll().then(function (d) { S.downloads = d || []; });
