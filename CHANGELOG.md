@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.1 - 2026-11-24
+- PWA update badge now respects React playback state (no forced reload while playing)
+- Final React build deployed as the production  client
+
 ## v2.0.0 - 2026-11-24
 - New React 19 + Vite 7 + TypeScript web client is now the default at `/musique/`
 - Legacy vanilla client preserved at `/musique-legacy/`

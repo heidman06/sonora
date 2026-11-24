@@ -32,6 +32,9 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle('has-player', !!state.current)
   }, [state.current])
+  useEffect(() => {
+    ;(window as unknown as { Sonora?: unknown }).Sonora = { S: { playing: state.playing, lang: state.lang } }
+  }, [state.playing, state.lang])
 
   const lang = state.lang as Lang
   const t = (key: string) => tr(lang, key)
