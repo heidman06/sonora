@@ -1,9 +1,12 @@
 import { Api, thumbOf } from '../lib/api'
-import { downloadAll, downloadDel, downloadGet, downloadPut } from '../lib/idb'
+import { downloadAll, downloadDel, downloadGet, downloadPut, lireManifest, manifestSync } from '../lib/idb'
 import { storage, userKey } from '../lib/storage'
+import { tr } from '../lib/i18n'
+import { installSleep, type SleepMode } from './sleep'
+import { installCrossfade } from './crossfade'
 import type { Account, AuthResponse, DownloadRecord, Lang, PlaylistSummary, Track } from '../lib/types'
 
-const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+export const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
 type Repeat = 'off' | 'all' | 'one'
@@ -29,6 +32,12 @@ export interface PlayerState {
   hls: boolean
   loadingTrack: string
   downloading: Record<string, boolean>
+  downloadProgress: Record<string, number>
+  stale: { playlists: boolean; likes: boolean }
+  sleep: { mode: string; endsAt: number }
+  crossfade: number
+  rate: number
+  swUpdate: boolean
   authError: string
   toast: string
 }
@@ -62,6 +71,12 @@ function initialState(): PlayerState {
     hls: false,
     loadingTrack: '',
     downloading: {},
+    downloadProgress: {},
+    stale: { playlists: false, likes: false },
+    sleep: { mode: 'off', endsAt: 0 },
+    crossfade: storage.get('crossfade', 0),
+    rate: storage.get('rate', 1),
+    swUpdate: false,
     authError: '',
     toast: '',
   }
@@ -87,6 +102,10 @@ export class PlayerEngine {
   private watchdogTries = 0
   private skipCount = 0
   private historyLoadedFor = ''
+  private preShuffle: Track[] | null = null
+  private fadeMedia: HTMLAudioElement | null = null
+  private fadeBlobUrl = ''
+  private sleepHalted = false
   private onToast: ToastFn | null = null
 
   constructor() {
@@ -94,7 +113,6 @@ export class PlayerEngine {
     this.media.id = 'sonora-media'
     this.media.preload = 'auto'
     this.media.setAttribute('playsinline', '')
-    this.media.style.display = 'none'
     document.body.appendChild(this.media)
     const active = storage.get('active', '')
     const accounts = storage.get('accounts', [] as Account[])
@@ -102,6 +120,66 @@ export class PlayerEngine {
     if (acc) { this.state.user = acc.user; this.state.token = acc.token || '' }
     this.api.setToken(this.state.token)
     this.bindMedia()
+    this.media.playbackRate = this.state.rate
+    this.media.defaultPlaybackRate = this.state.rate
+    installSleep({
+      media: this.media,
+      read: () => ({ currentTime: this.state.currentTime, duration: this.state.duration }),
+      get: () => this.state.sleep as { mode: SleepMode; endsAt: number },
+      expire: () => { this.sleepHalted = true; this.media.pause(); this.patch({ playing: false, sleep: { mode: 'off', endsAt: 0 } }); this.toast(tr(this.state.lang, 'sleepDone')) },
+      endStop: () => { this.sleepHalted = true; this.media.pause(); this.patch({ playing: false, sleep: { mode: 'off', endsAt: 0 } }); this.toast(tr(this.state.lang, 'sleepDone')) },
+    })
+    installCrossfade({
+      media: this.media,
+      read: () => ({ hls: this.state.hls, repeat: this.state.repeat, currentTime: this.state.currentTime, duration: this.state.duration, volume: this.state.volume, sleepMode: this.state.sleep.mode, sleepEndsAt: this.state.sleep.endsAt, sleepHalted: this.sleepHalted }),
+      fade: () => this.state.crossfade,
+      next: () => { const n = this.state.queue[this.currentIndex() + 1]; return n ? { id: n.id, duration: n.duration || 0 } : null },
+      startSecondary: async (src) => {
+        if (!this.fadeMedia) {
+          this.fadeMedia = document.createElement('audio')
+          this.fadeMedia.id = 'sonora-fade'
+          this.fadeMedia.preload = 'auto'
+          this.fadeMedia.defaultPlaybackRate = this.state.rate
+          this.fadeMedia.playbackRate = this.state.rate
+          this.fadeMedia.setAttribute('playsinline', '')
+          document.body.appendChild(this.fadeMedia)
+        }
+        const nxt = this.state.queue[this.currentIndex() + 1]
+        const id = nxt?.id
+        const rec = id ? await downloadGet(id).catch(() => null) : null
+        if (rec?.blob) { this.revokeFadeBlob(); this.fadeBlobUrl = URL.createObjectURL(rec.blob); this.fadeMedia.src = this.fadeBlobUrl }
+        else this.fadeMedia.src = src
+        this.fadeMedia.load()
+        return this.fadeMedia
+      },
+      relay: async (position) => {
+        const idx = this.currentIndex() + 1
+        const track = this.state.queue[idx]
+        if (!track) throw new Error('no next')
+        const src = this.fadeMedia ? this.fadeMedia.src : ''
+        if (this.fadeMedia) this.fadeMedia.pause()
+        this.revokeBlob()
+        if (this.fadeBlobUrl) { this.blobUrl = this.fadeBlobUrl; this.fadeBlobUrl = ''; this.media.src = this.blobUrl }
+        else this.media.src = src
+        this.media.load()
+        try { this.media.currentTime = position } catch { /* noop */ }
+        this.media.volume = this.state.volume
+        await this.media.play()
+        if (this.sleepHalted) {
+          this.media.pause()
+          this.patch({ playing: false, sleep: { mode: 'off', endsAt: 0 } })
+          this.toast(tr(this.state.lang, 'sleepDone'))
+          return // pas d'historique fantôme ni de reprise sur le suivant
+        }
+        this.patch({ current: track, currentTime: position, duration: track.duration || this.state.duration })
+        this.persistQueue()
+        this.api.pushHistory(track)
+        this.updateMediaSession()
+        this.prefetchNext()
+      },
+      abandon: () => { if (this.fadeMedia) this.fadeMedia.pause(); this.revokeFadeBlob(); this.media.volume = this.state.volume },
+      rampTick: (a, b) => { this.media.volume = a; if (this.fadeMedia) this.fadeMedia.volume = b },
+    })
     document.addEventListener('pointerdown', this.unlock, { capture: true, once: true })
     document.addEventListener('touchstart', this.unlock, { capture: true, once: true })
     this.api.onUnauthorized = () => this.handleUnauthorized()
@@ -129,8 +207,11 @@ export class PlayerEngine {
 
   setToastHandler(fn: ToastFn | null): void { this.onToast = fn }
 
+  showToast(message: string): void { this.toast(message) }
+
   // ---------- auth / accounts ----------
   private booted = false
+  private bootGestureArmed = false
   async boot(): Promise<void> {
     if (this.booted) return
     this.booted = true
@@ -148,7 +229,11 @@ export class PlayerEngine {
       this.api.me().catch(() => { /* offline token is fine */ })
       await this.refreshLibrary()
     }
-    this.patch({ ready: true })
+    // Reouverture a froid : jamais de lecture automatique (iOS peut restaurer la
+    // session media). On garde la file/le titre pour reprise manuelle, sans src.
+    this.media.pause()
+    this.media.removeAttribute('src')
+    this.patch({ ready: true, playing: false, loadingTrack: '' })
   }
 
   private async loadLocalUser(): Promise<void> {
@@ -156,9 +241,16 @@ export class PlayerEngine {
     const queue = storage.get(userKey(this.state.user, 'queue'), [] as Track[])
     const qi = storage.get(userKey(this.state.user, 'qi'), -1)
     const likes = storage.get(userKey(this.state.user, 'favs'), [] as Track[])
-    const downloads = await downloadAll()
+    const playlists = storage.get(userKey(this.state.user, 'playlists'), [] as PlaylistSummary[])
+    let downloads = await downloadAll().catch(() => [] as DownloadRecord[])
+    if (!downloads.length) {
+      const man = lireManifest()
+      if (man.length) downloads = man.map((m) => ({ ...m, blob: new Blob([]), missing: true }))
+    } else {
+      manifestSync(downloads)
+    }
     const current = queue[qi] || null
-    this.patch({ queue, current, likes, downloads })
+    this.patch({ queue, current, likes, downloads, playlists })
     if (current && !this.state.ready) this.patch({ ready: true })
     this.historyLoadedFor = ''
     this.applyThemeLanguage()
@@ -196,6 +288,14 @@ export class PlayerEngine {
   async setActiveUser(name: string): Promise<void> {
     const acc = this.state.accounts.find((a) => a.user === name)
     if (!acc) return
+    // Stop the previous account's audio before swapping state (no UI/audio desync).
+    this.media.pause()
+    this.revokeBlob()
+    this.media.removeAttribute('src')
+    this.media.load()
+    this.hls.active = false
+    this.sleepHalted = false
+    this.patch({ playing: false, current: null, queue: [], currentTime: 0, duration: 0, hls: false })
     this.api.setToken(acc.token)
     storage.set('active', name)
     storage.set('user', name)
@@ -220,25 +320,32 @@ export class PlayerEngine {
   private handleUnauthorized(): void {
     storage.del('active')
     storage.del('token')
-    this.patch({ user: '', token: '', authError: 'session expirée' })
+    this.patch({ user: '', token: '', authError: tr(this.state.lang, 'sessionExpired') })
   }
 
   // ---------- data ----------
   async refreshLibrary(): Promise<void> {
     if (!this.state.token) return
     const [playlists, likes, history] = await Promise.all([
-      this.api.playlists().catch(() => [] as PlaylistSummary[]),
-      this.api.likes().catch(() => [] as Track[]),
+      this.api.playlists().catch(() => null),
+      this.api.likes().catch(() => null),
       this.api.history(30).catch(() => [] as Track[]),
     ])
-    this.patch({ playlists, likes })
+    // A failed fetch must never wipe the offline cache (design R9).
+    const patch: Partial<PlayerState> = {}
+    const stale = { ...this.state.stale }
+    if (playlists) { patch.playlists = playlists; storage.set(userKey(this.state.user, 'playlists'), playlists); stale.playlists = false } else stale.playlists = true
+    if (likes) { patch.likes = likes; storage.set(userKey(this.state.user, 'favs'), likes); stale.likes = false } else stale.likes = true
+    patch.stale = stale
+    this.patch(patch)
     if (history.length) storage.set(userKey(this.state.user, 'recent'), history)
   }
 
   async loadPlaylists(): Promise<PlaylistSummary[]> {
-    const playlists = await this.api.playlists().catch(() => [])
-    this.patch({ playlists })
-    return playlists
+    const playlists = await this.api.playlists().catch(() => null)
+    if (playlists) { this.patch({ playlists, stale: { ...this.state.stale, playlists: false } }); storage.set(userKey(this.state.user, 'playlists'), playlists); return playlists }
+    this.patch({ stale: { ...this.state.stale, playlists: true } })
+    return this.state.playlists
   }
 
   async createPlaylist(name: string): Promise<PlaylistSummary> {
@@ -255,7 +362,7 @@ export class PlayerEngine {
   async addToPlaylist(playlistId: number | string, track: Track): Promise<void> {
     await this.api.addToPlaylist(playlistId, track)
     await this.loadPlaylists()
-    this.toast('Ajouté ✓')
+    this.toast(tr(this.state.lang, 'toastAdded'))
   }
 
   isLiked(id: string): boolean {
@@ -271,7 +378,7 @@ export class PlayerEngine {
       if (liked) await this.api.unlike(track.id)
       else await this.api.like(track)
     } catch {
-      this.toast('Favori non enregistré')
+      this.toast(tr(this.state.lang, 'toastFavNotSaved'))
     }
   }
 
@@ -282,7 +389,9 @@ export class PlayerEngine {
   }
 
   async playTrack(track: Track, queue?: Track[], index = 0): Promise<void> {
-    if (!track || !track.id) { this.toast('Titre introuvable'); return }
+    this.bootGestureArmed = true
+    if (!track || !track.id) { this.toast(tr(this.state.lang, 'toastTrackNotFound')); return }
+    this.sleepHalted = false // intention de lecture utilisateur : le crossfade redevient opérant
     const nextQueue = queue ? queue.slice() : (this.state.queue.some((t) => t.id === track.id) ? this.state.queue : [track, ...this.state.queue])
     const qi = queue ? index : Math.max(0, nextQueue.findIndex((t) => t.id === track.id))
     this.intentPlay = true
@@ -304,8 +413,8 @@ export class PlayerEngine {
 
   private async startDirect(track: Track): Promise<void> {
     try {
-      const rec = await downloadGet(track.id)
-      if (rec?.blob) {
+      const rec = await downloadGet(track.id).catch(() => null)
+      if (rec?.blob && rec.blob.size > 0) {
         this.revokeBlob()
         this.blobUrl = URL.createObjectURL(rec.blob)
         this.media.src = this.blobUrl
@@ -319,8 +428,9 @@ export class PlayerEngine {
       this.patch({ loadingTrack: '' })
       await this.playMedia()
       this.prefetchNext()
+      if ((!rec || !rec.blob || rec.blob.size === 0) && lireManifest().some((m) => m.id === track.id)) void this.downloadTrack(track)
     } catch (error) {
-      this.toast('Lecture impossible')
+      this.toast(tr(this.state.lang, 'toastPlaybackImpossible'))
       this.patch({ loadingTrack: '' })
       this.maybeSkip()
       void error
@@ -328,12 +438,13 @@ export class PlayerEngine {
   }
 
   private async playMedia(): Promise<void> {
+    if (!this.bootGestureArmed) { this.patch({ playing: false, loadingTrack: '' }); return }
     try {
       await this.media.play()
       this.patch({ playing: true, loadingTrack: '' })
     } catch {
       this.patch({ playing: false, loadingTrack: '' })
-      this.toast('Appuie sur lecture')
+      this.toast(tr(this.state.lang, 'toastTapPlay'))
     }
   }
 
@@ -386,10 +497,15 @@ export class PlayerEngine {
   private supportsHls(): boolean {
     if (Date.now() < this.hls.cooldownUntil) return false
     if (IS_IOS) return true
-    try { return this.media.canPlayType('application/vnd.apple.mpegurl') !== '' } catch { return false }
+    // Chrome/Android répondent « maybe » sans lecture HLS native : ne réserver la
+    // file HLS qu'à Safari (vendor Apple + « probably »), sinon mode direct.
+    const safari = typeof navigator !== 'undefined' && navigator.vendor === 'Apple Computer, Inc.'
+    if (!safari) return false
+    try { return this.media.canPlayType('application/vnd.apple.mpegurl') === 'probably' } catch { return false }
   }
 
   playNext(auto = false): void {
+    if (!auto) this.bootGestureArmed = true
     const queue = this.hls.active ? this.hls.queue : this.state.queue
     if (!queue.length) return
     const idx = this.state.current ? queue.findIndex((t) => t.id === this.state.current?.id) : 0
@@ -409,6 +525,7 @@ export class PlayerEngine {
   }
 
   playPrev(): void {
+    this.bootGestureArmed = true
     if (this.hls.active) {
       const queue = this.hls.queue
       const idx = this.hls.queue.findIndex((t) => t.id === this.state.current?.id)
@@ -428,9 +545,17 @@ export class PlayerEngine {
   }
 
   togglePlay(): void {
+    this.bootGestureArmed = true
     this.intentPlay = true
-    if (!this.media.src) { if (this.state.queue.length) void this.playTrack(this.state.current || this.state.queue[0], this.state.queue, 0); return }
-    if (this.media.paused) void this.playMedia()
+    if (!this.media.src) {
+      if (this.state.queue.length) {
+        const first = this.state.current || this.state.queue[0]
+        const qi = Math.max(0, this.state.queue.findIndex((t) => t.id === first.id))
+        void this.playTrack(first, this.state.queue, qi)
+      }
+      return
+    }
+    if (this.media.paused) { this.sleepHalted = false; void this.playMedia() }
     else { this.media.pause(); this.patch({ playing: false }) }
   }
 
@@ -496,7 +621,9 @@ export class PlayerEngine {
 
   toggleShuffle(): void {
     const shuffle = !this.state.shuffle
-    const queue = shuffle ? [...this.state.queue].sort(() => Math.random() - 0.5) : this.state.queue
+    let queue: Track[]
+    if (shuffle) { this.preShuffle = this.state.queue.slice(); queue = shuffleArray(this.state.queue) }
+    else { queue = this.preShuffle && this.preShuffle.length === this.state.queue.length ? this.preShuffle.slice() : this.state.queue; this.preShuffle = null }
     const current = this.state.current
     const qi = current ? queue.findIndex((t) => t.id === current.id) : -1
     this.patch({ shuffle, queue })
@@ -504,13 +631,124 @@ export class PlayerEngine {
     if (this.hls.active && qi >= 0) void this.startHls(qi)
   }
 
+  clearQueue(): void {
+    const cur = this.state.current
+    const queue = cur ? [cur] : []
+    this.patch({ queue })
+    this.persistQueue()
+    if (this.hls.active && cur) void this.startHls(0)
+  }
+
+  async saveQueueAsPlaylist(name: string): Promise<void> {
+    const clean = name.trim()
+    if (!clean || !this.state.queue.length) return
+    const p = await this.api.createPlaylist(clean)
+    await this.api.bulkAddToPlaylist(p.id, this.state.queue)
+    await this.loadPlaylists()
+    this.toast(tr(this.state.lang, 'toastAdded'))
+  }
+
+  setSleep(mode: string): void {
+    if (mode !== 'off') this.sleepHalted = false
+    const minutes = Number(mode)
+    const endsAt = mode !== 'off' && mode !== 'end' && Number.isFinite(minutes) ? Date.now() + minutes * 60000 : 0
+    this.patch({ sleep: { mode, endsAt } })
+  }
+
+  setCrossfade(sec: number): void {
+    storage.set('crossfade', sec)
+    this.patch({ crossfade: sec })
+  }
+
+  setRate(r: number): void {
+    const rate = Math.max(0.75, Math.min(1.5, r))
+    this.media.playbackRate = rate
+    this.media.defaultPlaybackRate = rate
+    if (this.fadeMedia) { this.fadeMedia.playbackRate = rate; this.fadeMedia.defaultPlaybackRate = rate }
+    storage.set('rate', rate)
+    this.patch({ rate })
+  }
+
+  setSwUpdate(v: boolean): void { this.patch({ swUpdate: v }) }
+
+  seekTo(seconds: number): void {
+    if (this.hls.active) {
+      const idx = Math.max(0, this.hls.queue.findIndex((t) => t.id === this.state.current?.id))
+      const off = this.hls.offsets[idx] || 0
+      const dur = this.hls.durs[idx] || 1
+      try { this.media.currentTime = off + Math.max(0, Math.min(dur - 0.35, seconds)) } catch { /* noop */ }
+      this.updatePositionState()
+      return
+    }
+    const dur = Number.isFinite(this.media.duration) ? this.media.duration : 0
+    if (dur > 0) this.media.currentTime = Math.max(0, Math.min(dur - 0.2, seconds))
+  }
+
+  seekBy(delta: number): void {
+    const base = this.hls.active ? this.state.currentTime : (this.media.currentTime || 0)
+    this.seekTo(base + delta)
+  }
+
+  playNextInQueue(track: Track): void {
+    const queue = this.state.queue.slice()
+    const idx = this.state.current ? queue.findIndex((t) => t.id === this.state.current?.id) : -1
+    queue.splice(idx + 1, 0, track)
+    this.patch({ queue })
+    this.persistQueue()
+    if (this.hls.active) void this.startHls(Math.max(0, idx))
+    this.toast(tr(this.state.lang, 'toastAdded'))
+  }
+
+  enqueue(track: Track): void {
+    const queue = [...this.state.queue, track]
+    this.patch({ queue })
+    this.persistQueue()
+    if (this.hls.active) void this.startHls(this.currentIndex())
+    this.toast(tr(this.state.lang, 'toastAdded'))
+  }
+
+  async removeFromPlaylist(playlistId: number | string, track: Track): Promise<void> {
+    await this.api.removeFromPlaylist(playlistId, track.id)
+    await this.loadPlaylists()
+  }
+
+  async startRadio(seed: string): Promise<void> {
+    this.bootGestureArmed = true
+    const tracks = await this.api.radio(seed, 30)
+    if (!tracks.length) { this.toast(tr(this.state.lang, 'error')); return }
+    // Le seed est imposé en tête de file (design F6), même si le serveur ne le renvoie pas.
+    const seedTrack = this.state.current && this.state.current.id === seed
+      ? this.state.current
+      : (this.state.queue.find((t) => t.id === seed) || this.state.likes.find((t) => t.id === seed) || { id: seed, title: seed, artist: '' })
+    const list = tracks[0] && tracks[0].id === seed ? tracks : [seedTrack, ...tracks.filter((t) => t.id !== seed)]
+    void this.playTrack(list[0], list, 0)
+  }
+
   async downloadTrack(track: Track): Promise<void> {
-    if (this.state.downloads.some((d) => d.id === track.id) || this.state.downloading[track.id]) return
+    if (this.state.downloads.some((d) => d.id === track.id && !d.missing) || this.state.downloading[track.id]) return
     this.patch({ downloading: { ...this.state.downloading, [track.id]: true } })
     try {
       const res = await fetch('/musique/dl/' + encodeURIComponent(track.id), { cache: 'no-store' })
       if (!res.ok) throw new Error('HTTP ' + res.status)
-      const blob = await res.blob()
+      const total = Number(res.headers.get('Content-Length')) || 0
+      let blob: Blob
+      if (res.body && total > 0) {
+        const reader = res.body.getReader()
+        const chunks: BlobPart[] = []
+        let recu = 0
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value) {
+            chunks.push(value)
+            recu += value.length
+            this.patch({ downloadProgress: { ...this.state.downloadProgress, [track.id]: Math.min(99, Math.round((recu / total) * 100)) } })
+          }
+        }
+        blob = new Blob(chunks, { type: res.headers.get('Content-Type') || 'audio/mp4' })
+      } else {
+        blob = await res.blob()
+      }
       const rec: DownloadRecord = {
         id: track.id, title: track.title, artist: track.artist, thumb: track.thumb,
         duration: track.duration, blob, addedAt: Date.now(),
@@ -518,20 +756,22 @@ export class PlayerEngine {
       await downloadPut(rec)
       const downloads = await downloadAll()
       this.patch({ downloads })
-      this.toast('Téléchargé ✓')
+      this.toast(tr(this.state.lang, 'toastDownloaded'))
     } catch {
-      this.toast('Téléchargement impossible')
+      this.toast(tr(this.state.lang, 'toastDownloadImpossible'))
     } finally {
       const next = { ...this.state.downloading }
       delete next[track.id]
-      this.patch({ downloading: next })
+      const prog = { ...this.state.downloadProgress }
+      delete prog[track.id]
+      this.patch({ downloading: next, downloadProgress: prog })
     }
   }
 
   async removeDownload(id: string): Promise<void> {
     await downloadDel(id)
     this.patch({ downloads: await downloadAll() })
-    this.toast('Supprimé')
+    this.toast(tr(this.state.lang, 'toastRemoved'))
   }
 
   // ---------- media ----------
@@ -562,7 +802,10 @@ export class PlayerEngine {
       this.patch({ currentTime: this.media.currentTime, duration })
       this.updatePositionState()
     })
-    this.media.addEventListener('play', () => { this.patch({ playing: true }); this.prefetchNext(); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } } this.updatePositionState() })
+    const arm = () => { this.bootGestureArmed = true }
+    document.addEventListener('pointerdown', arm, { once: true })
+    document.addEventListener('keydown', arm, { once: true })
+    this.media.addEventListener('play', () => { if (!this.bootGestureArmed) { this.media.pause(); this.patch({ playing: false }); return } this.patch({ playing: true }); this.prefetchNext(); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } } this.updatePositionState() })
     this.media.addEventListener('pause', () => { this.patch({ playing: false }); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'paused' } catch { /* noop */ } } this.updatePositionState() })
     this.media.addEventListener('playing', () => { this.patch({ playing: true, loadingTrack: '' }); this.clearStall() })
     this.media.addEventListener('waiting', () => this.armStall())
@@ -596,16 +839,16 @@ export class PlayerEngine {
     }
     this.watchdogTries += 1
     if (this.watchdogTries <= 1 && this.state.current) {
-      this.toast('Reconnexion…')
+      this.toast(tr(this.state.lang, 'toastReconnecting'))
       void this.startDirect(this.state.current)
       return
     }
-    this.toast('Titre indisponible — suivant')
+    this.toast(tr(this.state.lang, 'toastUnavailableNext'))
     this.maybeSkip()
   }
 
   private maybeSkip(): void {
-    if (this.skipCount >= 5) { this.toast('Lecture impossible'); return }
+    if (this.skipCount >= 5) { this.toast(tr(this.state.lang, 'toastPlaybackImpossible')); return }
     if (this.state.queue.length < 2) return
     this.skipCount += 1
     window.setTimeout(() => this.playNext(true), 600)
@@ -621,7 +864,7 @@ export class PlayerEngine {
       if (this.hls.active) { this.media.currentTime = this.media.currentTime + 0.01; return }
       const current = this.state.current
       if (!current) return
-      this.toast('Reconnexion…')
+      this.toast(tr(this.state.lang, 'toastReconnecting'))
       try { this.media.currentTime = pos } catch { /* noop */ }
       this.media.src = '/musique/dl/' + encodeURIComponent(current.id) + '?r=' + Date.now()
       void this.playMedia()
@@ -643,6 +886,10 @@ export class PlayerEngine {
 
   private revokeBlob(): void {
     if (this.blobUrl) { URL.revokeObjectURL(this.blobUrl); this.blobUrl = '' }
+  }
+
+  private revokeFadeBlob(): void {
+    if (this.fadeBlobUrl) { URL.revokeObjectURL(this.fadeBlobUrl); this.fadeBlobUrl = '' }
   }
 
   private unlock = (): void => {
@@ -684,12 +931,14 @@ export class PlayerEngine {
         title: this.state.current.title,
         artist: this.state.current.artist || 'Sonora',
         album: 'Sonora',
-        artwork: this.state.current.thumb ? [{ src: this.state.current.thumb, sizes: '512x512' }] : [],
+        artwork: this.state.current.thumb ? [{ src: this.state.current.thumb, sizes: '480x360', type: 'image/jpeg' }] : [],
       })
       navigator.mediaSession.setActionHandler('play', () => this.togglePlay())
       navigator.mediaSession.setActionHandler('pause', () => this.togglePlay())
       navigator.mediaSession.setActionHandler('nexttrack', () => this.playNext(false))
       navigator.mediaSession.setActionHandler('previoustrack', () => this.playPrev())
+      navigator.mediaSession.setActionHandler('seekbackward', () => this.seekBy(-10))
+      navigator.mediaSession.setActionHandler('seekforward', () => this.seekBy(10))
     } catch { /* noop */ }
   }
 
@@ -702,6 +951,12 @@ export class PlayerEngine {
   canHls(): boolean { return this.supportsHls() }
 
   timeLabel(sec: number): string { return fmt(sec) }
+}
+
+export function shuffleArray<T>(list: T[]): T[] {
+  const a = list.slice()
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]] }
+  return a
 }
 
 export const engine = new PlayerEngine()

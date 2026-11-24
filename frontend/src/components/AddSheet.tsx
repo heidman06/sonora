@@ -1,20 +1,22 @@
 import { useState } from 'react'
-import type { PlayerState } from '../audio/engine'
+import type { UiState } from '../audio/usePlayer'
 import type { Lang, PlaylistSummary, Track } from '../lib/types'
 import { tr } from '../lib/i18n'
 import { Icon } from './Icon'
 
 interface Props {
-  state: PlayerState
+  state: UiState
   lang: Lang
+  track?: Track | null
   onClose: () => void
   onAdd: (playlistId: number, track: Track) => void
   onCreate: (name: string) => Promise<PlaylistSummary>
 }
 
-export function AddSheet({ state, lang, onClose, onAdd, onCreate }: Props) {
+export function AddSheet(props: Props) {
+  const { state, lang, onClose, onAdd, onCreate } = props
   const [name, setName] = useState('')
-  const current = state.current
+  const current = props.track ?? state.current
   return (
     <div className="sheet small-sheet" id="addsheet">
       <div className="sheet-grab" />

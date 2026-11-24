@@ -2,7 +2,7 @@
 // Extracted from dashboard/server.mjs, configurable via environment variables.
 import {
   createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync,
-  statSync, unlinkSync, writeFileSync, openSync, readSync, closeSync, renameSync,
+  statSync, unlinkSync, writeFileSync, openSync, readSync, closeSync, renameSync, utimesSync,
 } from 'node:fs';
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,8 +82,7 @@ function lancerTelechargement(id, dossier) {
   const dest = join(dossier, id + '.m4a');
   const part = dest + '.part';
   const url = 'https://www.youtube.com/watch?v=' + id;
-  const commun = ['--cookies', config.cookies, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--no-warnings'];
-  const args = commun.concat(['-o', part, url]);
+  const args = ['--cookies', config.cookies, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--no-warnings', '-o', part, url];
   const complet = ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '-o', part, url]);
   const promesse = new Promise((res) => {
     const lancer = (a) => {
@@ -128,6 +127,7 @@ function cacheValide(dossier, id) {
 
 function servirFichier(req, res, fichier) {
   const taille = statSync(fichier).size;
+  try { utimesSync(fichier, new Date(), new Date()); } catch (e) {} // keep eviction LRU honest
   const type = extname(fichier) === '.webm' ? 'audio/webm' : 'audio/mp4';
   const portee = req.headers.range;
   if (portee && /^bytes=\d*-\d*$/.test(portee)) {
@@ -167,22 +167,8 @@ export async function handleAudio(req, res, path) {
   }
   if (fichiers.length) { servirFichier(req, res, join(dossier, fichiers[0])); return true; }
   if (req.method === 'HEAD') {
-    // silent prefetch
-    const dest = join(dossier, id + '.m4a');
-    const proc = spawn(config.ytdlp, ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '-o', dest + '.part', 'https://www.youtube.com/watch?v=' + id]), { stdio: 'ignore', detached: true });
-    proc.on('close', () => {
-      try {
-        const t = statSync(dest + '.part').size;
-        if (t > 200000 && proc.exitCode === 0) {
-          finaliser(dest + '.part', dest, () => {
-            try { writeFileSync(join(dossier, id + '.ok'), String(statSync(dest).size)); } catch (e) {}
-            elaguerCache(dossier);
-          });
-        } else { try { unlinkSync(dest + '.part'); } catch (e) {} }
-      } catch (e) {}
-    });
-    proc.on('error', () => {});
-    proc.unref();
+    // Silent prefetch through the shared in-flight map: never two yt-dlp on one .part file.
+    void lancerTelechargement(id, dossier);
     res.writeHead(200, { 'Content-Type': 'audio/mp4', 'Cache-Control': 'no-store' }).end();
     return true;
   }

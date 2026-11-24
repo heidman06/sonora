@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { engine } from './audio/engine'
-import { usePlayer } from './audio/usePlayer'
-import { useHashRoute } from './lib/hooks'
+import { usePlayerSelector, selectUiState } from './audio/usePlayer'
+import { shallowEqual } from './lib/selector'
+import { useHashRoute, useDynamicAmbient, useMediaQuery } from './lib/hooks'
 import { nextLang, langLabel, tr } from './lib/i18n'
 import type { Lang, Track } from './lib/types'
 import { storage } from './lib/storage'
@@ -12,28 +13,43 @@ import { QueueSheet } from './components/QueueSheet'
 import { AddSheet } from './components/AddSheet'
 import { DesktopSidebar } from './components/DesktopSidebar'
 import { DesktopPlayer } from './components/DesktopPlayer'
+import { NowPlayingPanel } from './components/NowPlayingPanel'
 import { HomeView } from './views/HomeView'
 import { SearchView } from './views/SearchView'
 import { LibraryView } from './views/LibraryView'
 import { PlaylistView } from './views/PlaylistView'
 import { ArtistView } from './views/ArtistView'
+import { LikedView } from './views/LikedView'
+import { SmartView } from './views/SmartView'
+import { StatsView } from './views/StatsView'
+import { MixesView } from './views/MixesView'
+import { ActionSheet } from './components/ActionSheet'
+import { UpdateBanner } from './components/UpdateBanner'
+import { applyUpdate } from './lib/sw'
 
 export default function App() {
-  const state = usePlayer()
+  const state = usePlayerSelector(selectUiState, shallowEqual)
   const route = useHashRoute()
   const [playerOpen, setPlayerOpen] = useState(false)
+  const [playerClosing, setPlayerClosing] = useState(false)
   const [queueOpen, setQueueOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [addTrack, setAddTrack] = useState<Track | null>(null)
+  const [actionTrack, setActionTrack] = useState<Track | null>(null)
+  const widePanel = useMediaQuery('(min-width: 1500px)')
   const [theme, setTheme] = useState<'dark' | 'light'>(() => storage.get('theme', 'dark') as 'dark' | 'light')
 
   useEffect(() => { void engine.boot() }, [])
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     storage.set('theme', theme)
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#07070a' : '#f7f7f9')
   }, [theme])
   useEffect(() => {
     document.body.classList.toggle('has-player', !!state.current)
   }, [state.current])
+  useDynamicAmbient(state.current?.id)
   useEffect(() => {
     ;(window as unknown as { Sonora?: unknown }).Sonora = { S: { playing: state.playing, lang: state.lang } }
   }, [state.playing, state.lang])
@@ -42,7 +58,12 @@ export default function App() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target && target.matches('input,textarea,select,[contenteditable=true]')) return
-      if (event.code === 'Space') { event.preventDefault(); engine.togglePlay() }
+      if (event.code === 'Space') {
+        if (target && target.closest('button,a,[role="button"],select,summary')) return
+        event.preventDefault(); engine.togglePlay()
+      }
+      if (event.code === 'ArrowRight' && event.shiftKey) { event.preventDefault(); engine.seekBy(10); return }
+      if (event.code === 'ArrowLeft' && event.shiftKey) { event.preventDefault(); engine.seekBy(-10); return }
       if (event.code === 'ArrowRight') { event.preventDefault(); engine.playNext(false) }
       if (event.code === 'ArrowLeft') { event.preventDefault(); engine.playPrev() }
     }
@@ -61,6 +82,14 @@ export default function App() {
     void engine.playTrack(track, queue, index)
   }
 
+  // Fermeture pilotée : état closing + timer reduce?0:260 (design V4/C3).
+  const closePlayer = () => {
+    if (playerClosing) return
+    setPlayerClosing(true)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.setTimeout(() => { setPlayerOpen(false); setPlayerClosing(false) }, reduce ? 0 : 260)
+  }
+
   const nav = [
     { tab: 'listen', href: '#/listen', ico: 'listen', label: t('listen') },
     { tab: 'search', href: '#/search', ico: 'search', label: t('search') },
@@ -77,9 +106,14 @@ export default function App() {
             <span className="brand-name">Sonora</span>
           </a>
           <div className="top-actions">
-            <button className="icon-btn lang-btn" aria-label={t('language')} onClick={() => engine.setLang(nextLang(lang))}>{langLabel(lang)}</button>
-            <button className="icon-btn" aria-label="theme" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
+            <button className="icon-btn lang-btn" aria-label={t('language')} onClick={() => engine.setLang(nextLang(lang))}>
+              <Icon name="globe" size={14} /><span>{langLabel(lang)}</span>
+            </button>
+            <button className="icon-btn theme-btn" aria-label={t('theme')} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+              <span className={'theme-ico' + (theme === 'light' ? ' light' : '')}>
+                <Icon name="sun" size={18} className="i-sun" />
+                <Icon name="moon" size={18} className="i-moon" />
+              </span>
             </button>
           </div>
         </div>
@@ -87,19 +121,23 @@ export default function App() {
 
       <main className="view">
         {route.name === 'listen' && <HomeView lang={lang} state={state} onPlay={play} />}
-        {route.name === 'search' && <SearchView lang={lang} state={state} query={route.id} onPlay={play} />}
+        {route.name === 'search' && <SearchView lang={lang} state={state} query={route.id} onPlay={play} onMenu={setActionTrack} />}
         {route.name === 'library' && (
-          <LibraryView lang={lang} state={state} onPlay={play} onLike={(track) => void engine.toggleLike(track)}
+          <LibraryView lang={lang} state={state} onPlay={play} onLike={(track) => void engine.toggleLike(track)} onMenu={setActionTrack}
             onDeletePlaylist={(id) => { void engine.deletePlaylist(id) }} />
         )}
         {route.name === 'playlist' && (
-          <PlaylistView lang={lang} state={state} id={route.id} onPlay={play} onLike={(track) => void engine.toggleLike(track)}
+          <PlaylistView lang={lang} state={state} id={route.id} onPlay={play} onLike={(track) => void engine.toggleLike(track)} onMenu={setActionTrack}
             onDelete={(id) => { void engine.deletePlaylist(id); window.location.hash = '#/library' }} />
         )}
-        {route.name === 'artist' && <ArtistView lang={lang} state={state} id={route.id} onPlay={play} onLike={(track) => void engine.toggleLike(track)} />}
+        {route.name === 'artist' && <ArtistView lang={lang} state={state} id={route.id} onPlay={play} onLike={(track) => void engine.toggleLike(track)} onMenu={setActionTrack} />}
+        {route.name === 'liked' && <LikedView lang={lang} state={state} onMenu={setActionTrack} />}
+        {route.name === 'smart' && <SmartView lang={lang} state={state} id={route.id} />}
+        {route.name === 'stats' && <StatsView lang={lang} state={state} />}
+      {route.name === 'mixes' && <MixesView lang={lang} state={state} id={route.id} onPlay={play} onMenu={setActionTrack} />}
       </main>
 
-      <MiniPlayer state={state} onOpen={() => setPlayerOpen(true)} onToggle={() => engine.togglePlay()} onNext={() => engine.playNext(false)} />
+      <MiniPlayer state={state} lang={lang} onOpen={() => setPlayerOpen(true)} onToggle={() => engine.togglePlay()} onNext={() => engine.playNext(false)} />
 
       <nav className="tabs" id="tabs">
         {nav.map((item) => (
@@ -110,8 +148,8 @@ export default function App() {
       </nav>
 
       {playerOpen && state.current && (
-        <PlayerSheet state={state} lang={lang} liked={state.likes.some((x) => x.id === state.current?.id)}
-          onClose={() => setPlayerOpen(false)} onToggle={() => engine.togglePlay()}
+        <PlayerSheet state={state} lang={lang} closing={playerClosing} liked={state.likes.some((x) => x.id === state.current?.id)}
+          onClose={closePlayer} onToggle={() => engine.togglePlay()}
           onNext={() => engine.playNext(false)} onPrev={() => engine.playPrev()}
           onSeek={(ratio) => engine.seekRatio(ratio)} onVolume={(value) => engine.setVolume(value)}
           onLike={() => state.current && void engine.toggleLike(state.current)}
@@ -122,8 +160,14 @@ export default function App() {
 
       {queueOpen && <QueueSheet lang={lang} state={state} onClose={() => setQueueOpen(false)} onPlay={play} fmt={(seconds) => engine.timeLabel(seconds)} />}
 
-      {addOpen && state.current && (
-        <AddSheet state={state} lang={lang} onClose={() => setAddOpen(false)}
+      {actionTrack && (
+        <ActionSheet track={actionTrack} lang={lang} onClose={() => setActionTrack(null)}
+          onPlayNext={(t) => engine.playNextInQueue(t)} onEnqueue={(t) => engine.enqueue(t)}
+          onAdd={(t) => { setAddTrack(t); setAddOpen(true) }} onRadio={(t) => void engine.startRadio(t.id)} />
+      )}
+      {state.swUpdate && <UpdateBanner lang={lang} playing={state.playing} onReload={applyUpdate} />}
+      {addOpen && (state.current || addTrack) && (
+        <AddSheet state={state} lang={lang} track={addTrack ?? state.current} onClose={() => { setAddOpen(false); setAddTrack(null) }}
           onAdd={(playlistId, track) => { void engine.addToPlaylist(playlistId, track).then(() => setAddOpen(false)) }}
           onCreate={(name) => engine.createPlaylist(name)} />
       )}
@@ -132,9 +176,16 @@ export default function App() {
         onOpen={() => setPlayerOpen(true)} onToggle={() => engine.togglePlay()}
         onNext={() => engine.playNext(false)} onPrev={() => engine.playPrev()}
         onSeek={(ratio) => engine.seekRatio(ratio)} onVolume={(value) => engine.setVolume(value)}
-        onQueue={() => setQueueOpen(true)} onLike={() => state.current && void engine.toggleLike(state.current)} />
+        onQueue={() => setQueueOpen(true)} onLike={() => state.current && void engine.toggleLike(state.current)}
+        onRepeat={() => engine.cycleRepeat()} onShuffle={() => engine.toggleShuffle()}
+        onAdd={() => setAddOpen(true)} onDownload={() => state.current && void engine.downloadTrack(state.current)} />
 
-      {state.toast && <div className="toast">{state.toast}</div>}
+      {widePanel && state.current && <NowPlayingPanel lang={lang} state={state} onQueue={() => setQueueOpen(true)} />}
+
+      {state.toast && <div className="toast" role="status" aria-live="polite">{state.toast}</div>}
+      {state.authError && !state.token && (
+        <div className="session-banner" role="alert">{state.authError} <a href="#/library">{t('signIn')}</a></div>
+      )}
     </div>
   )
 }

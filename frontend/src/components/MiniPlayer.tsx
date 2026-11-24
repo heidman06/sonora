@@ -1,28 +1,36 @@
-import type { PlayerState } from '../audio/engine'
+import type { UiState } from '../audio/usePlayer'
+import { usePlayerSelector } from '../audio/usePlayer'
+import type { Lang } from '../lib/types'
+import { tr } from '../lib/i18n'
+import { Art } from './Art'
 import { Icon } from './Icon'
 
 interface Props {
-  state: PlayerState
+  state: UiState
+  lang: Lang
   onOpen: () => void
   onToggle: () => void
   onNext: () => void
 }
 
-export function MiniPlayer({ state, onOpen, onToggle, onNext }: Props) {
+export function MiniPlayer({ state, lang, onOpen, onToggle, onNext }: Props) {
+  const currentTime = usePlayerSelector((s) => s.currentTime)
+  const duration = usePlayerSelector((s) => s.duration)
   if (!state.current) return null
-  const progress = state.duration ? Math.min(100, (state.currentTime / state.duration) * 100) : 0
+  const progress = duration ? Math.min(100, (currentTime / duration) * 100) : 0
   return (
     <div className="mini" id="mini" onClick={onOpen}>
-      <img className="mini-art" src={state.current.thumb || ''} alt="" />
+      <Art id={state.current.id} className="mini-art" />
       <div className="mini-txt">
         <div className="mini-title">{state.current.title}</div>
         <div className="mini-sub">{state.current.artist || ''}</div>
       </div>
-      <button className="mini-btn" aria-label={state.playing ? 'Pause' : 'Play'}
+      <button className={'mini-btn morph' + (state.playing ? ' on' : '')} aria-label={state.playing ? tr(lang, 'pause') : tr(lang, 'play')}
         onClick={(e) => { e.stopPropagation(); onToggle() }}>
-        <Icon name={state.playing ? 'pause' : 'play'} size={18} />
+        <Icon name="play" size={18} className="i-play" />
+        <Icon name="pause" size={18} className="i-pause" />
       </button>
-      <button className="mini-next" aria-label="Suivant"
+      <button className="mini-next" aria-label={tr(lang, 'next')}
         onClick={(e) => { e.stopPropagation(); onNext() }}>
         <Icon name="next" size={18} />
       </button>

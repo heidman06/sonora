@@ -1,5 +1,66 @@
 # Changelog
 
+## v2.4.4 - 2026-11-24
+- Téléchargements résilients : manifeste local (localStorage) en plus d'IndexedDB ; si le stockage IDB est vidé/indisponible (pression mémoire iOS, upgrade bloqué), la liste est restaurée depuis le manifeste avec un badge « copie hors ligne perdue » et la lecture re-télécharge automatiquement la copie ; retry IDB (2 tentatives) ; la liste en mémoire n'est plus jamais vidée par une erreur transitoire ; une copie blob vide n'est plus utilisée comme source (stream + re-sauvegarde)
+
+## v2.4.3 - 2026-11-24
+- Recherche : plus de double état vide (« Search » + « No results ») quand aucune requête n'est saisie ; les blocs de résultats (titres/vidéos/artistes/albums) ne se rendent que si une requête est présente ; l'état vide unique affiche les chips personnalisées
+
+## v2.4.2 - 2026-11-24
+- Plus de lecture automatique à la réouverture de l'app : au boot l'élément media est mis en pause sans src (la file et le titre restent pour une reprise manuelle), et toute tentative de play avant un premier geste utilisateur (tap/clavier/contrôle MediaSession) est refusée — y compris la restauration de session media iOS
+
+## v2.4.1 - 2026-11-24
+- « Récemment écouté » sans doublons : /api/mus/history renvoie désormais un titre distinct par videoId (dernière écoute gardée, ROW_NUMBER PARTITION BY) + dédup côté client en ceinture-bretelles ; le journal d'écoutes brut reste intact pour les stats/top
+- Nettoyage en prod des 23 lignes d'historique « QA » laissées par les sweeps automatisés de vérification ( artefacts de test, pas des écoutes utilisateur )
+
+## v2.4.0 - 2026-11-24
+- Tes Mix façon Spotify : 8 à 12 mixes personnalisés par compte (daily par artiste, mixes par mood, découvertes, en boucle, favoris, archives, rotation, vrac), 15–60 titres selon corpus, covers mosaïque 2×2, noms/sous-titres localisés ×3 ; endpoint /mixes2 (cache mix_cache TTL 45 min + seed jour UTC, purges événementielles + epoch anti-résurrection, warm borné cooldown 6 h daily-only) ; /mixes v1 legacy inchangé ; vue #/mixes + détail ; chips de recherche personnalisées (4–6 scorées / 6 statiques) ; design Elephant-Goldfish rév. 2 (22 constats corrigés)
+
+## v2.3.3 - 2026-11-24
+- Icônes explicites : crayon pour renommer une playlist, ondes pour « lancer la radio », compteur pour la vitesse (l'ancien glyphe « rays » ressemblait à un spinner de chargement)
+
+## v2.3.1 - 2026-11-24
+- Correctifs responsive iPhone : rangée d'actions playlist scrollable depuis le début (plus de boutons rognés aux deux bords), bouton renommer aligné à côté du titre (plus de pastille orpheline), menu ⋯ / ajout / import en vraie feuille basse avec scrim et rangées 48 px (plus de plein écran transparent), cibles tactiles like/⋯/corbeille 40×40 px (étaient 27×20), gouttières resserrées ≤ 400 px
+
+## v2.3.0 - 2026-11-24
+- Moods d'exploration personnalisés par compte : pools localisés 14×3 (FR identique à l'existant, EN/ES marchés US-UK/LatAm), scoring local déterministe (artistes mappés cap 24 + tokens récents cap 12, alias cross-marché), 2 chips « parce que tu aimes X », exploration = découverte (moods non signalés d'abord), endpoint GET /api/mus/moods?lang (cache compte+langue TTL 30 min, purge sur like/feedback/éditions playlist), skeleton chips + stale-while-revalidate localStorage borné LRU 12, effets HomeView séparés (switch de langue = 1 fetch), garde de course ; tests 48/48 backend + 85/85 frontend ; design Elephant-Goldfish rév. 2 (18 constats corrigés)
+
+## v2.2.5 - 2026-11-24
+- Correctif boutons : la file HLS n'est plus tentée sur Chrome/Android (canPlayType « maybe » mensonger) — réservée à iOS/Safari (« probably ») ; en mode direct, next/prev/seek/vitesse/crossfade/repeat fonctionnent normalement sur Chrome desktop et Android
+- Radio : seed imposé en tête de file côté client (design F6)
+- UndoToast : classe undo-toast (testabilité)
+
+## v2.2.4 - 2026-11-24
+- sleepHalted réarmé par toute intention de lecture utilisateur (playTrack, reprise, bascule de compte) : le crossfade redevient opérant après un déclenchement de la minuterie ; garde CLI du resolver par realpath (liens symboliques) ; réserves documentées dans LIMITATIONS.md (filet i18n figé, sleepHalted, garde resolver)
+
+## v2.2.3 - 2026-11-24
+- Course sleep-minutes × crossfade fermée par un marqueur sleepHalted survivant au reset de sleep (garde du relais, abandon de la rampe, shouldArm) + test ; setRate met à jour fadeMedia ; garde CLI du resolver par import.meta.url/pathToFileURL ; DECISION.md arithmétique corrigée
+
+## v2.2.2 - 2026-11-24
+- Résidus de la re-revue finale : relais crossfade ne journalise plus de titre fantôme quand le sleep repause ; fadeMedia calé sur la vitesse utilisateur et dans le viewport (iOS) ; scroll de rehydratation après commit des derniers lots ; dédup in-flight de radio() (un seul warm par seed) ; garde CLI de musique-resolve (module importable, tests v21c réellement exécutés : 32/32) ; SW ne purge jamais sans meta ; clés seed i18n couvertes par le test ; timing d'extraction palette exposé pour les CA
+
+## v2.2.1 - 2026-11-24
+- Correctifs de la revue finale Goldfish (18 constats) : filet ended capture (sleep), garde sleep×crossfade, rehydratation TrackList non corrompue, vitesse persistée via defaultPlaybackRate, sémaphore recos simple prise, warm radio non court-circuité, undo avec toasts + ordre reconstruit, classe playing, DOM page ≤ 100 (batchSize 20), saveQueueAsPlaylist bulk, sélecteurs média réels, SW meta-cache, palette négative évincée, registerSw dans main, compte à rebours sleep en-tête, /stats GET-only, tests supplémentaires (resolver ordre, statsPour, sleep ended, crossfade sleep, i18n dynamiques), artefacts perf + captures commis au dépôt
+
+## v2.2.0 - 2026-11-24
+- Refonte visuelle incrémentale « Apple Music × hi-fi » : tokens contraste AA (tout texte ≤ 13 px, dark+light, pire cas translucide recalculé couche/couche), gradient blanc du mini/tabs supprimé, verre .78
+- Ambient dynamique par pochette (buckets 32×32, cache de promesses 64, reset explicite, color-mix + repli rgba) + halo player dédié ; CSS mort .ambient supprimé
+- Motion system : springs CSS (ouverture 420 ms / fermeture 240 ms avec variante desktop centrée), morph play/pause, burst du like 6 particules, stagger 1er lot ≤ 12 lignes, kill prefers-reduced-motion étendu aux delays + timers JS
+- Typo Inter Variable OFL (latin 48 256 o transférés, unicode-range), tabular-nums généralisé, précache SW étendu aux woff2
+- Panneau « Now playing » 320 px ≥ 1500 px (rang dépouillé 6 éléments, ≤ 52 nœuds, mount conditionnel)
+- 6 états vides illustrés (SVG stroke 1.8, ≤ 10/11 nœuds, pleine largeur en grille) ; test i18n anti-hints-orphelins
+- Micro-détails : mute réel avec restauration, temps restant au survol desktop + aria-valuetext, reset ranges webkit+moz (plus de bleu natif), preview pochette hover CSS, badge langue globe+code, toggle thème animé, icônes ±10 s distinctes
+- Marque : manifest purpose any + entrée maskable dédiée (50 % safe-zone), favicon.svg référencé, theme-color meta dynamique (#07070a / #f7f7f9)
+- QA : tsc 0 erreur, vitest 76/76 (dont contrast + palette), build OK ; audio/* et server/* intouchés
+
+## v2.1.0 - 2026-11-24
+- Lot 0 : 17 correctifs backend/frontend (silence HLS éphémère, course .part, LRU réel, AbortSignal, shuffle Fisher-Yates + restauration, bascule compte sans désync, reprise session iOS, durées HLS réelles, filtre mixte à limites de mots, métadonnées CarPlay/feedback, ordre imports Spotify, i18n toasts/aria/ErrorBoundary, Espace sans hijack des boutons)
+- Lot 1 : seek au relâchement, volume masqué iOS, barre desktop enrichie (repeat/shuffle/ajout/download/±10 s/vitesse), retour + scroll restauré, pochettes HD same-origin (maxres→mq), skeletons, égaliseur, progression download %, version injectée
+- Échelle : TrackList à délégation (index absolu, lots 100, rehydratation rAF), sélecteur usePlayerSelector à cache d'égalité, UiState (11 consommateurs), vue #/liked filtrée, bibliothèque réordonnée, drapeaux stale par source, test i18n durci (keysets + littéraux + copies EN→ES)
+- Playlists : colonne position (backfill unique, NULL-last), bulk ≤100 avec durées, reorder transactionnel, renommage inline, retrait + undo 5 s par compensation, export M3U/JSON, import YouTube avec aperçu + compensation, ConfirmDialog accessible
+- Features : paroles synchronisées lrclib (cache IDB v2 durci), minuterie de sommeil (mode fin + filet ended), crossfade direct égal-power (blob révoqué), vitesse 0.75–1.5× + Shift+flèches ±10 s + handlers MediaSession, radio par titre/artiste + CarPlay getSimilarSongs2, playlists intelligentes top/recent/never, statistiques #/stats (history.duration + NULLIF + invalidation cache), service worker app-shell offline + bannière MAJ sans coupure, alertes ntfy (timer 5 min, dédup 6 h)
+- QA : node:test 30/30, vitest 62/62, smoke prod 14/14, QA API 54/54 ; DOM froid ≤ 100 ; boot offline vérifié
+
 ## v2.0.3 - 2026-11-24
 - Lock screen / Now Playing progress now uses the current track duration via MediaSession setPositionState
 - Fixes negative/queue-length remaining time on iOS lock screen for HLS queues

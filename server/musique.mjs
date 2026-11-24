@@ -2,6 +2,8 @@
 // musique.mjs - multi-account music database (playlists, likes, history, recos)
 // ============================================================
 import { DatabaseSync } from 'node:sqlite';
+import { composerMoods, catalogueStatique, MOODS_VERSION } from './musique-moods.mjs';
+import { composerMixes, MIXES_VERSION, melangerSeede } from './musique-mixes.mjs';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +41,13 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS reco_cache (user_id INTEGER PRIMARY KEY, json TEXT NOT NULL, at INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS track_meta (video_id TEXT PRIMARY KEY, duration INTEGER NOT NULL DEFAULT 0, at TEXT DEFAULT (datetime(\'now\')))',
   'CREATE TABLE IF NOT EXISTS reco_feedback (user_id INTEGER NOT NULL, video_id TEXT NOT NULL, action TEXT NOT NULL, at TEXT DEFAULT (datetime(\'now\')), PRIMARY KEY (user_id, video_id))',
+  'CREATE TABLE IF NOT EXISTS mix_cache (user_id INTEGER PRIMARY KEY, json TEXT NOT NULL, at INTEGER NOT NULL, seed TEXT NOT NULL)',
 ].join('; ');
+
+export function fermerBase() {
+  try { if (db) db.close(); } catch (e) {}
+  db = null;
+}
 
 export function ouvrirBase() {
   if (db) return db;
@@ -48,6 +56,27 @@ export function ouvrirBase() {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA busy_timeout = 8000');
   db.exec(SCHEMA);
+  // P1: soft migration, single backfill (column-absent guard makes it once-only).
+  try {
+    const cols = db.prepare('PRAGMA table_info(playlist_tracks)').all();
+    if (!cols.some((c) => c.name === 'position')) {
+      db.exec('ALTER TABLE playlist_tracks ADD COLUMN position INTEGER');
+      const pls = db.prepare('SELECT DISTINCT playlist_id FROM playlist_tracks').all();
+      const up = db.prepare('UPDATE playlist_tracks SET position = ? WHERE rowid = ?');
+      for (const p of pls) {
+        const rows = db.prepare('SELECT rowid AS rid FROM playlist_tracks WHERE playlist_id = ? ORDER BY added_at ASC, rowid ASC').all(p.playlist_id);
+        rows.forEach((r, i) => up.run(i, r.rid));
+      }
+    }
+  } catch (e) {}
+  // S5: soft migration history.duration + one-shot backfill from track_meta.
+  try {
+    const hc = db.prepare('PRAGMA table_info(history)').all();
+    if (!hc.some((c) => c.name === 'duration')) {
+      db.exec('ALTER TABLE history ADD COLUMN duration INTEGER');
+      db.exec('UPDATE history SET duration = (SELECT tm.duration FROM track_meta tm WHERE tm.video_id = history.video_id) WHERE duration IS NULL');
+    }
+  } catch (e) {}
   try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) {}
   if (!globalThis.__walTimer) {
     globalThis.__walTimer = setInterval(function () {
@@ -142,8 +171,10 @@ export function identifiants(username, password) {
   return verifier(username, password);
 }
 
-export function lancerYtdlp(args, ms) {
-  return new Promise((res) => {
+export async function lancerYtdlp(args, ms) {
+  await ytPrendre();
+  try {
+    return await new Promise((res) => {
     const p = spawn(YTDLP, ['--cookies', COOKIES, '--js-runtimes', 'node:' + NODE_BIN,
       '--remote-components', EJS_COMPONENTS, '--no-warnings'].concat(args), { stdio: ['ignore', 'pipe', 'ignore'] });
     let out = '';
@@ -151,13 +182,16 @@ export function lancerYtdlp(args, ms) {
     const t = setTimeout(() => { try { p.kill('SIGKILL'); } catch (e) {} }, ms || 25000);
     p.on('close', () => { clearTimeout(t); res(out); });
     p.on('error', () => { clearTimeout(t); res(''); });
-  });
+    });
+  } finally { ytRendre(); }
 }
 
 const PRINT = '%(id)s' + TAB + '%(title)s' + TAB + '%(channel)s' + TAB + '%(duration)s';
 
-function ytPlaylist(list) {
-  return new Promise((resolve, reject) => {
+async function ytPlaylist(list) {
+  await ytPrendre();
+  try {
+    return await new Promise((resolve, reject) => {
     const proc = spawn(YTDLP, ['--cookies', COOKIES, '--js-runtimes', 'node:' + NODE_BIN, '--remote-components', EJS_COMPONENTS, '--flat-playlist', '--playlist-end', '100', '--no-warnings', '-J', 'https://www.youtube.com/playlist?list=' + list], { stdio: ['ignore', 'pipe', 'ignore'] });
     let sortie = '';
     proc.stdout.on('data', (c) => { sortie += c.toString('utf8'); });
@@ -174,11 +208,47 @@ function ytPlaylist(list) {
           duration: Number(e.duration) || 0,
           thumb: (e.thumbnails && e.thumbnails[0] && e.thumbnails[0].url) || ('https://i.ytimg.com/vi/' + e.id + '/mqdefault.jpg'),
         }));
-        resolve({ name: info.title || '', tracks });
+        resolve({ name: info.title || '', tracks, truncated: (info.entries || []).length >= 100 });
       } catch (e) { reject(e); }
     });
     proc.on('error', reject);
-  });
+    });
+  } finally { ytRendre(); }
+}
+
+export function metaConnue(d, vid) {
+  const l = d.prepare('SELECT title, artist FROM likes WHERE video_id = ? AND length(trim(title)) > 0 LIMIT 1').get(vid);
+  if (l) return l;
+  const p = d.prepare('SELECT title, artist FROM playlist_tracks WHERE video_id = ? AND length(trim(title)) > 0 LIMIT 1').get(vid);
+  if (p) return p;
+  const r = d.prepare('SELECT title, artist FROM resolve_cache WHERE video_id = ? LIMIT 1').get(vid);
+  if (r && r.title) return { title: r.title, artist: r.artist };
+  return null;
+}
+
+// Fill blank metadata rows (CarPlay star/scrobble, feedback like) without blocking the request.
+export function majMetaAsync(vid) {
+  void (async () => {
+    try {
+      const out = await lancerYtdlp(['--no-playlist', '--print', PRINT, 'https://www.youtube.com/watch?v=' + vid], 20000);
+      const m = (out.split(NL).filter(Boolean)[0] || '').split(TAB);
+      const t = m[1] || '', ch = m[2] || '';
+      if (!t) return;
+      const artist = (ch && ch !== 'NA' && ch !== 'N/A') ? ch : '';
+      const d = ouvrirBase();
+      d.prepare('UPDATE likes SET title = ?, artist = ? WHERE video_id = ? AND length(trim(title)) = 0').run(t, artist, vid);
+      d.prepare('UPDATE playlist_tracks SET title = ?, artist = ? WHERE video_id = ? AND length(trim(title)) = 0').run(t, artist, vid);
+      d.prepare('UPDATE history SET title = ?, artist = ? WHERE video_id = ? AND length(trim(title)) = 0').run(t, artist, vid);
+    } catch (e) {}
+  })();
+}
+
+export function pousseHistory(d, userId, vid, titre, artiste, duree) {
+  const dernier = d.prepare('SELECT video_id, at FROM history WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(userId);
+  if (dernier && dernier.video_id === vid && (Date.now() - Date.parse(dernier.at + 'Z')) < 60000) return;
+  const dur = Number.isFinite(Number(duree)) && Number(duree) > 0 ? Math.min(36000, Math.round(Number(duree))) : null;
+  d.prepare('INSERT INTO history (user_id, video_id, title, artist, duration) VALUES (?, ?, ?, ?, ?)').run(userId, vid, texte(titre, 300), texte(artiste, 300), dur);
+  for (const k of Array.from(statsCache.keys())) { if (k.indexOf(userId + ':') === 0) statsCache.delete(k); }
 }
 
 export async function resoudre(titre, artiste) {
@@ -213,6 +283,26 @@ const MIX_TTL = 45 * 60 * 1000;
 const recosEnCours = new Map();
 const mixCache = new Map();
 const mixesCache = new Map();
+const moodsCache = new Map();
+const MOODS_TTL = 30 * 60 * 1000;
+function purgeMoods(userId) { for (const k of Array.from(moodsCache.keys())) { if (k.indexOf(userId + ':') === 0) moodsCache.delete(k); } }
+const mixEpoch = new Map();
+const lastWarm = new Map();
+let warmActif = false;
+let warmLances = 0;
+let compteSqlMixes = 0;
+const warmFile = [];
+function purgeMixes(userId) {
+  mixesCache.delete(userId);
+  try { ouvrirBase().prepare('DELETE FROM mix_cache WHERE user_id = ?').run(userId); } catch (e) {}
+  mixEpoch.set(userId, (mixEpoch.get(userId) || 0) + 1);
+}
+function ecrireWarm(userId, epoch, seed, resp) {
+  if ((mixEpoch.get(userId) || 0) !== epoch) return false;
+  const r = ouvrirBase().prepare('UPDATE mix_cache SET json = ?, at = ? WHERE user_id = ? AND seed = ?').run(JSON.stringify(resp), Date.now(), userId, seed);
+  if (r.changes) mixesCache.set(userId, { at: Date.now(), seed, resp });
+  return r.changes > 0;
+}
 let ytActifs = 0;
 const ytFile = [];
 function ytPrendre() {
@@ -220,9 +310,9 @@ function ytPrendre() {
 }
 function ytRendre() { const n = ytFile.shift(); if (n) n(); else ytActifs--; }
 
-const FILTRE_MIXTE = /mix|playlist|compilation|mega ?mix|best of|greatest hits|1 hour|full album|top [0-9]+|non ?stop|sesi[oó]n|radio|acoustic session|live session|reaction|lyrics video|slowed|reverb|sped ?up|nightcore|8d audio|bass ?boosted|1 ?hour|loop/i;
+const FILTRE_MIXTE = /\b(?:mega ?mix|megamix|non ?stop|1 ?hour|one hour|full album|best of|greatest hits|top [0-9]+|slowed|reverb|sped ?up|nightcore|8d audio|bass ?boosted|lyrics? video|reaction|live session|acoustic session|sesi[oó]n|radio (?:edit|session|mix|version)|playlist|compilation|mix|loop (?:version|edit))\b/i;
 
-const PIPED_URL = (process.env.PIPED_URL || 'http://127.0.0.1:8081').replace(/\/$/, '');
+const PIPED_URL = (process.env.PIPED_URL ?? 'http://127.0.0.1:8081').replace(/\/$/, '');
 
 async function reliePiped(videoId) {
   try {
@@ -253,6 +343,27 @@ function affinites(d, userId) {
     ' UNION ALL SELECT artist AS artiste, CASE WHEN at >= datetime(\'now\', \'-14 day\') THEN 1.6 WHEN at >= datetime(\'now\', \'-60 day\') THEN 1.0 ELSE 0.5 END AS p FROM history WHERE user_id = ? AND length(trim(artist)) > 0' +
     ' UNION ALL SELECT pt.artist AS artiste, 0.4 AS p FROM playlist_tracks pt JOIN playlists p ON p.id = pt.playlist_id WHERE p.user_id = ? AND length(trim(pt.artist)) > 0' +
     ') GROUP BY artiste ORDER BY p DESC LIMIT 10').all(userId, userId, userId);
+}
+
+export function moodsPour(d, userId, lang) {
+  const cle = userId + ':' + lang;
+  const c = moodsCache.get(cle);
+  if (c && Date.now() - c.at < MOODS_TTL) return c.val;
+  const nLikes = d.prepare('SELECT COUNT(*) AS n FROM likes WHERE user_id = ?').get(userId).n;
+  const nHist = d.prepare("SELECT COUNT(*) AS n FROM history WHERE user_id = ? AND at >= datetime('now','-90 day')").get(userId).n;
+  const cold = nLikes < 3 && nHist < 10;
+  let val;
+  if (cold) {
+    val = { cold: true, moods: catalogueStatique(lang), artists: [] };
+  } else {
+    const aff = affinites(d, userId);
+    const likes = d.prepare('SELECT title, artist FROM likes WHERE user_id = ? ORDER BY added_at DESC LIMIT 200').all(userId);
+    const history = d.prepare("SELECT title, artist, at FROM history WHERE user_id = ? AND at >= datetime('now','-90 day') ORDER BY at DESC LIMIT 400").all(userId);
+    val = composerMoods({ likes, history, affinites: aff, lang, cold: false });
+  }
+  moodsCache.set(cle, { at: Date.now(), val });
+  if (moodsCache.size > 60) moodsCache.delete(moodsCache.keys().next().value);
+  return val;
 }
 
 function connus(d, userId) {
@@ -297,6 +408,7 @@ function ecrireRecos(d, userId, items) {
   } catch (e) { console.error('[recos] cache', e.message); }
   for (const k of Array.from(mixCache.keys())) { if (k.indexOf(userId + ':') === 0) mixCache.delete(k); }
   try { mixesCache.delete(userId); } catch (e) {}
+  purgeMixes(userId);
 }
 
 async function calculerRecos(userId) {
@@ -331,9 +443,7 @@ async function calculerRecos(userId) {
   for (const a of artistes.slice(0, 8)) {
     let out = '';
     try {
-      await ytPrendre();
-      try { out = await lancerYtdlp(['--flat-playlist', '--print', PRINT, 'ytsearch10:' + a.artiste], 30000); }
-      finally { ytRendre(); }
+      out = await lancerYtdlp(['--flat-playlist', '--print', PRINT, 'ytsearch10:' + a.artiste], 30000);
     } catch (e) { out = ''; }
     let pris = 0;
     for (const ligne of out.split(NL).filter(Boolean)) {
@@ -416,8 +526,191 @@ async function mix(userId, n) {
 }
 
 const MIXES_TTL = 45 * 60 * 1000;
+const statsCache = new Map();
+const radioCache = new Map();
+const RADIO_TTL = 30 * 60 * 1000;
+
+export function statsPour(d, userId, mois) {
+  const cle = userId + ':' + mois;
+  const c = statsCache.get(cle);
+  if (c && Date.now() - c.at < 60000) return c.items;
+  const since = '-' + mois + ' month';
+  const jo = "FROM history h LEFT JOIN track_meta tm ON tm.video_id = h.video_id WHERE h.user_id = ? AND h.at >= datetime('now', ?)";
+  const totals = d.prepare('SELECT COUNT(*) AS plays, COALESCE(SUM(COALESCE(NULLIF(h.duration, 0), NULLIF(tm.duration, 0), 0)), 0) / 60.0 AS minutes, COUNT(DISTINCT h.video_id) AS tracks ' + jo).get(userId, since);
+  const topTracks = d.prepare('SELECT h.video_id AS videoId, MAX(h.title) AS title, MAX(h.artist) AS artist, COUNT(*) AS plays, COALESCE(MAX(tm.duration), 0) AS duration ' + jo + ' GROUP BY h.video_id ORDER BY plays DESC LIMIT 20').all(userId, since);
+  const topArtists = d.prepare("SELECT h.artist AS artist, COUNT(*) AS plays, COALESCE(SUM(COALESCE(NULLIF(h.duration, 0), NULLIF(tm.duration, 0), 0)), 0) / 60.0 AS minutes " + jo + " AND length(trim(h.artist)) > 0 GROUP BY h.artist ORDER BY plays DESC LIMIT 12").all(userId, since);
+  const perMonth = d.prepare("SELECT strftime('%Y-%m', h.at) AS month, COUNT(*) AS plays, COALESCE(SUM(COALESCE(NULLIF(h.duration, 0), NULLIF(tm.duration, 0), 0)), 0) / 60.0 AS minutes " + jo + ' GROUP BY month ORDER BY month').all(userId, since);
+  const items = { totals: { plays: totals.plays, minutes: Math.round(totals.minutes), tracks: totals.tracks }, topTracks, topArtists, perMonth };
+  statsCache.set(cle, { at: Date.now(), items });
+  if (statsCache.size > 60) statsCache.delete(statsCache.keys().next().value);
+  return items;
+}
+
+function smartPour(d, userId, key) {
+  const map = (x) => ({ videoId: x.video_id, title: x.title || '', artist: x.artist || '', duration: Number(x.duration) || 0 });
+  if (key === 'top') {
+    return d.prepare('SELECT h.video_id, MAX(h.title) AS title, MAX(h.artist) AS artist, COUNT(*) AS c, COALESCE(MAX(tm.duration), 0) AS duration FROM history h LEFT JOIN track_meta tm ON tm.video_id = h.video_id WHERE h.user_id = ? GROUP BY h.video_id ORDER BY c DESC LIMIT 50').all(userId).map(map);
+  }
+  if (key === 'recent') {
+    const rows = d.prepare('SELECT video_id, title, artist, added_at, 0 AS duration FROM likes WHERE user_id = ? UNION ALL SELECT pt.video_id, pt.title, pt.artist, pt.added_at, 0 FROM playlist_tracks pt JOIN playlists p ON p.id = pt.playlist_id WHERE p.user_id = ? ORDER BY added_at DESC LIMIT 80').all(userId, userId);
+    return uniques(rows.map((x) => ({ videoId: x.video_id, title: x.title, artist: x.artist, duration: 0 }))).slice(0, 50);
+  }
+  if (key === 'never') {
+    return d.prepare('SELECT l.video_id, l.title, l.artist, COALESCE(tm.duration, 0) AS duration FROM likes l LEFT JOIN track_meta tm ON tm.video_id = l.video_id WHERE l.user_id = ? AND l.video_id NOT IN (SELECT video_id FROM history WHERE user_id = ?) UNION SELECT pt.video_id, pt.title, pt.artist, COALESCE(tm.duration, 0) FROM playlist_tracks pt JOIN playlists p ON p.id = pt.playlist_id LEFT JOIN track_meta tm ON tm.video_id = pt.video_id WHERE p.user_id = ? AND pt.video_id NOT IN (SELECT video_id FROM history WHERE user_id = ?) LIMIT 50').all(userId, userId, userId, userId).map(map);
+  }
+  return null;
+}
+
+// Immediate, yt-dlp-free fallback for radio / CarPlay (same-artist library + secours).
+export function radioSync(d, userId, seed, n) {
+  const rej = rejetes(d, userId);
+  let artiste = '';
+  if (/^[A-Za-z0-9_-]{11}$/.test(seed)) {
+    const src = d.prepare('SELECT artist FROM likes WHERE video_id = ? AND length(trim(artist)) > 0 LIMIT 1').get(seed)
+      || d.prepare('SELECT artist FROM playlist_tracks WHERE video_id = ? AND length(trim(artist)) > 0 LIMIT 1').get(seed)
+      || d.prepare('SELECT artist FROM history WHERE video_id = ? AND length(trim(artist)) > 0 LIMIT 1').get(seed)
+      || d.prepare('SELECT artist FROM resolve_cache WHERE video_id = ? LIMIT 1').get(seed);
+    artiste = (src && src.artist) || '';
+  } else artiste = String(seed || '').slice(0, 100);
+  const rows = artiste
+    ? d.prepare('SELECT video_id, title, artist FROM likes WHERE user_id = ? AND artist = ? UNION ALL SELECT h.video_id, h.title, h.artist FROM history h WHERE h.user_id = ? AND h.artist = ? UNION ALL SELECT pt.video_id, pt.title, pt.artist FROM playlist_tracks pt JOIN playlists p ON p.id = pt.playlist_id WHERE p.user_id = ? AND pt.artist = ?').all(userId, artiste, userId, artiste, userId, artiste)
+    : [];
+  let out = melanger(uniques(rows.map((x) => ({ videoId: x.video_id, title: x.title, artist: x.artist, duration: 0, seed: artiste, source: 'radio' })))).filter((x) => x.videoId !== seed && !rej.has(x.videoId));
+  if (out.length < 6) out = out.concat(secours(d, userId, n).filter((x) => !rej.has(x.videoId)));
+  return uniques(out).slice(0, n);
+}
+
+const radioEnCours = new Map();
+export async function radio(userId, seed, n) {
+  const cle = userId + ':' + seed;
+  const c = radioCache.get(cle);
+  if (c && Date.now() - c.at < RADIO_TTL) return c.items;
+  if (radioEnCours.has(cle)) return radioEnCours.get(cle);
+  const p = radioCalcul(userId, seed, n).finally(() => radioEnCours.delete(cle));
+  radioEnCours.set(cle, p);
+  return p;
+}
+
+async function radioCalcul(userId, seed, n) {
+  const cle = userId + ':' + seed;
+  const d = ouvrirBase();
+  const rej = rejetes(d, userId);
+  let items = [];
+  if (/^[A-Za-z0-9_-]{11}$/.test(seed)) {
+    const rel = await reliePiped(seed);
+    items = rel.filter((x) => !rej.has(x.videoId) && !FILTRE_MIXTE.test(x.title) && (!x.duration || (x.duration >= 60 && x.duration <= 600)))
+      .map((x) => ({ videoId: x.videoId, title: x.title, artist: x.artist, duration: x.duration, seed: seed, source: 'radio' }));
+  } else {
+    const out = await lancerYtdlp(['--flat-playlist', '--print', PRINT, 'ytsearch10:' + String(seed).slice(0, 100)], 8000);
+    for (const ligne of out.split(NL).filter(Boolean)) {
+      const m = ligne.split(TAB);
+      const vid = m[0], t = m[1] || '', ch = m[2] || '', dur = Number(m[3] || 0);
+      if (!vid || !/^[A-Za-z0-9_-]{11}$/.test(vid) || rej.has(vid) || FILTRE_MIXTE.test(t)) continue;
+      if (dur && (dur < 60 || dur > 600)) continue;
+      items.push({ videoId: vid, title: t, artist: ch || String(seed), duration: dur, seed: String(seed), source: 'radio' });
+    }
+  }
+  if (items.length < 6) items = radioSync(d, userId, seed, n);
+  items = uniques(items).slice(0, n);
+  radioCache.set(cle, { at: Date.now(), items });
+  if (radioCache.size > 80) radioCache.delete(radioCache.keys().next().value);
+  return items;
+}
+
+// Cache-or-sync immediately, warm async (CarPlay must never block).
+export function radioImmediate(d, userId, seed, n) {
+  const c = radioCache.get(userId + ':' + seed);
+  if (c && Date.now() - c.at < RADIO_TTL) return c.items;
+  const items = radioSync(d, userId, seed, n);
+  // Ne pas écrire le cache ici : radio() doit pouvoir enrichir (warm async) sans court-circuit.
+  void radio(userId, seed, n).catch(() => {});
+  return items;
+}
+
+function mixes2sync(userId) {
+  const d = ouvrirBase();
+  const seedJour = new Date().toISOString().slice(0, 10);
+  const c = mixesCache.get(userId);
+  if (c && c.seed === seedJour && Date.now() - c.at < MIXES_TTL) return c.resp;
+  const row = d.prepare('SELECT json, at, seed FROM mix_cache WHERE user_id = ?').get(userId);
+  if (row && row.seed === seedJour && Date.now() - row.at < MIXES_TTL) {
+    try { const p = JSON.parse(row.json); if (p && p.v === MIXES_VERSION) { mixesCache.set(userId, { at: row.at, seed: row.seed, resp: p }); return p; } } catch (e) {}
+  }
+  compteSqlMixes = 0;
+  const q = (sql, ...a) => { compteSqlMixes++; return d.prepare(sql).all(...a); };
+  compteSqlMixes++;
+  const aff = affinites(d, userId);
+  const likes = q('SELECT l.video_id, l.title, l.artist, COALESCE(tm.duration, 0) AS duration FROM likes l LEFT JOIN track_meta tm ON tm.video_id = l.video_id WHERE l.user_id = ? ORDER BY l.added_at DESC, l.video_id ASC LIMIT 200', userId);
+  const history90 = q("SELECT h.video_id, h.title, h.artist, COALESCE(h.duration, tm.duration, 0) AS duration, h.at FROM history h LEFT JOIN track_meta tm ON tm.video_id = h.video_id WHERE h.user_id = ? AND h.at >= datetime('now','-90 day') ORDER BY h.at DESC, h.id DESC LIMIT 600", userId);
+  const playlists = q('SELECT pt.video_id, pt.title, pt.artist, COALESCE(tm.duration, 0) AS duration FROM playlist_tracks pt JOIN playlists p ON p.id = pt.playlist_id LEFT JOIN track_meta tm ON tm.video_id = pt.video_id WHERE p.user_id = ? ORDER BY (pt.position IS NULL), pt.position, pt.video_id ASC LIMIT 400', userId);
+  const boucle = q('SELECT video_id, title, artist, COUNT(*) AS c FROM history WHERE user_id = ? GROUP BY video_id ORDER BY c DESC, video_id ASC LIMIT 60', userId);
+  const archives = q("SELECT video_id, title, artist, COUNT(*) AS c FROM history WHERE user_id = ? AND at < datetime('now','-90 day') GROUP BY video_id ORDER BY c DESC, video_id ASC LIMIT 120", userId);
+  const rejSet = rejetes(d, userId);
+  const recRaw = lireRecos(d, userId);
+  const rec = Array.isArray(recRaw) ? recRaw : (recRaw && Array.isArray(recRaw.items) ? recRaw.items : []);
+  const corpusDistincts = new Set([].concat(likes, history90, playlists, boucle, archives).map((r) => r.video_id)).size;
+  const resp = composerMixes({ userId, seedJour, affinites: aff, likes, history90, playlists, boucle, archives, rejetes: rejSet, recos: rec, corpusDistincts });
+  try { d.prepare('INSERT INTO mix_cache (user_id, json, at, seed) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET json = excluded.json, at = excluded.at, seed = excluded.seed').run(userId, JSON.stringify(resp), Date.now(), seedJour); } catch (e) {}
+  mixesCache.set(userId, { at: Date.now(), seed: seedJour, resp });
+  if (mixesCache.size > 50) mixesCache.delete(mixesCache.keys().next().value);
+  return resp;
+}
+
+async function warmMixes(userId) {
+  if (process.env.SONORA_MIX_WARM === '0') return;
+  if (Date.now() - (lastWarm.get(userId) || 0) < 6 * 3600 * 1000) return;
+  if (warmActif) { warmFile.push(userId); if (warmFile.length > 2) warmFile.shift(); return; }
+  warmActif = true; warmLances++;
+  try {
+    const epoch = mixEpoch.get(userId) || 0;
+    const resp = mixes2sync(userId);
+    const dailies = resp.mixes.filter((m) => m.key.indexOf('daily') === 0 && m.count < 50).slice(0, 4);
+    const d = ouvrirBase();
+    const rejSet = rejetes(d, userId);
+    for (const m of dailies) {
+      const ancre = m.seeds && m.seeds[0] ? m.seeds[0].v : '';
+      if (!ancre) continue;
+      try {
+        const out = await lancerYtdlp(['--flat-playlist', '--print', PRINT, 'ytsearch40:' + ancre], 30000);
+        const vus = new Set(m.tracks.map((t) => t.videoId));
+        const ajouts = [];
+        for (const ligne of String(out || '').split('\n')) {
+          const parts = ligne.split('\t');
+          if (parts.length < 3) continue;
+          const vid = parts[0], titre = parts[1], artiste = parts[2], duree = Number(parts[3]) || 0;
+          if (!/^[A-Za-z0-9_-]{11}$/.test(vid) || vus.has(vid) || rejSet.has(vid)) continue;
+          if (FILTRE_MIXTE.test(titre) || duree < 60 || duree > 600) continue;
+          vus.add(vid); ajouts.push({ videoId: vid, title: titre, artist: artiste, duration: duree, seed: ancre, source: 'warm' });
+          if (m.tracks.length + ajouts.length >= 50) break;
+        }
+        if (ajouts.length) {
+          m.tracks = melangerSeede(m.tracks.concat(ajouts).slice(0, 60), userId + ':' + resp.seed + ':' + m.key);
+          m.count = m.tracks.length;
+          m.cover = m.tracks.slice(0, 4).map((t) => t.videoId);
+        }
+      } catch (e) {}
+    }
+    ecrireWarm(userId, epoch, resp.seed, resp);
+  } finally {
+    lastWarm.set(userId, Date.now());
+    warmActif = false;
+    const nxt = warmFile.shift();
+    if (nxt !== undefined) void warmMixes(nxt);
+  }
+}
 
 async function mixes(userId) {
+  const resp = mixes2sync(userId);
+  const noms = { deco: ['Découvertes', 'Nouveaux titres selon tes goûts'], boucle: ['En boucle', 'Ce que tu réécoutes le plus'], favoris: ['Tes favoris', 'Tes titres likés, en aléatoire'] };
+  const cles = ['deco', 'boucle', 'favoris'];
+  return cles.map((k) => {
+    const m = resp.mixes.find((x) => x.key === k);
+    const tracks = (m ? m.tracks : []).slice(0, 20);
+    return { key: k, name: noms[k][0], subtitle: noms[k][1], tracks, count: tracks.length, cover: tracks.slice(0, 4).map((t) => t.videoId) };
+  });
+}
+
+async function mixesLegacy(userId) {
   const c = mixesCache.get(userId);
   if (c && Date.now() - c.at < MIXES_TTL) return c.items;
   const d = ouvrirBase();
@@ -498,7 +791,7 @@ export function handleMusique(req, res, path, url) {
         const ps = d.prepare('SELECT id, name FROM playlists WHERE user_id = ? ORDER BY name').all(u.id);
         const out = [];
         for (const p of ps) {
-          const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ?').all(p.id);
+          const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY (position IS NULL), position').all(p.id);
           out.push({ id: p.id, name: p.name, count: tr.length, cover: tr.slice(0, 4).map((x) => x.video_id) });
         }
         return json(200, out);
@@ -519,13 +812,17 @@ export function handleMusique(req, res, path, url) {
         if (req.method === 'DELETE') {
           d.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ?').run(pid);
           d.prepare('DELETE FROM playlists WHERE id = ?').run(pid);
+          purgeMoods(u.id);
+          purgeMixes(u.id);
+        purgeMixes(u.id);
           return json(200, { ok: true });
         }
         if (req.method === 'GET') {
-          const tr = d.prepare('SELECT pt.video_id, pt.title, pt.artist, COALESCE(tm.duration, 0) AS duration FROM playlist_tracks pt LEFT JOIN track_meta tm ON tm.video_id = pt.video_id WHERE pt.playlist_id = ? ORDER BY pt.added_at DESC').all(pid);
+          const tr = d.prepare('SELECT pt.video_id, pt.title, pt.artist, COALESCE(tm.duration, 0) AS duration FROM playlist_tracks pt LEFT JOIN track_meta tm ON tm.video_id = pt.video_id WHERE pt.playlist_id = ? ORDER BY (pt.position IS NULL), pt.position').all(pid);
           const ids = tr.map((t) => t.video_id);
           const connues = dureesConnues(d, ids);
-          if (ids.slice(0, 10).some((id) => !connues.has(id))) dureesManquantes(d, ids).catch(() => {});
+          const manquants = ids.filter((id) => !connues.has(id)).slice(0, 60);
+          if (manquants.length) dureesManquantes(d, manquants).catch(() => {});
           return json(200, { id: p.id, name: p.name, tracks: tr.map((t) => ({ videoId: t.video_id, title: t.title, artist: t.artist, duration: Number(t.duration) || connues.get(t.video_id) || 0 })) });
         }
         if (req.method === 'PATCH') {
@@ -548,23 +845,73 @@ export function handleMusique(req, res, path, url) {
           if (!r) return json(502, { error: 'introuvable' });
           vid = r.video_id; titre = texte(r.title, 300); artiste = texte(r.artist, 300);
         }
-        d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(pid, vid, titre, artiste);
+        d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist, position) VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = ?), 0))').run(pid, vid, titre, artiste, pid);
+        purgeMoods(u.id);
+        purgeMixes(u.id);
         return json(200, { ok: true, videoId: vid, title: titre, artist: artiste });
       }
 
+      m = /^\/playlists\/(\d+)\/tracks\/bulk$/.exec(route);
+      if (m && req.method === 'POST') {
+        const pid = Number(m[1]);
+        if (!d.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').get(pid, u.id)) return json(404, { error: 'playlist' });
+        const b = await corps(req);
+        const tracks = Array.isArray(b.tracks) ? b.tracks : [];
+        if (!tracks.length || tracks.length > 100) return json(400, { error: 'bulk 1..100' });
+        const inser = d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist, position) VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = ?), 0))');
+        const meta = d.prepare('INSERT INTO track_meta (video_id, duration) VALUES (?, ?) ON CONFLICT(video_id) DO UPDATE SET duration = CASE WHEN track_meta.duration = 0 THEN excluded.duration ELSE track_meta.duration END');
+        let added = 0;
+        d.exec('BEGIN');
+        try {
+          for (const t of tracks) {
+            const vid = String(t.videoId || t.id || '');
+            if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) continue;
+            const r = inser.run(pid, vid, texte(t.title, 300), texte(t.artist, 300), pid);
+            if (r.changes) added++;
+            const dur = Number(t.duration) || 0;
+            if (dur > 0 && dur <= 36000) meta.run(vid, Math.round(dur));
+          }
+          d.exec('COMMIT');
+        } catch (e) { try { d.exec('ROLLBACK'); } catch (e2) {} return json(500, { error: 'bulk' }); }
+        purgeMoods(u.id);
+        purgeMixes(u.id);
+        return json(200, { ok: true, added });
+      }
+      m = /^\/playlists\/(\d+)\/reorder$/.exec(route);
+      if (m && req.method === 'POST') {
+        const pid = Number(m[1]);
+        if (!d.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').get(pid, u.id)) return json(404, { error: 'playlist' });
+        const b = await corps(req);
+        const ids = Array.isArray(b.videoIds) ? b.videoIds.map(String) : [];
+        const exist = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ?').all(pid).map((x) => x.video_id);
+        if (ids.length !== exist.length || new Set(ids).size !== ids.length || !ids.every((x) => exist.includes(x))) return json(400, { error: 'ensemble' });
+        const up = d.prepare('UPDATE playlist_tracks SET position = ? WHERE playlist_id = ? AND video_id = ?');
+        d.exec('BEGIN');
+        try { ids.forEach((x, i) => up.run(i, pid, x)); d.exec('COMMIT'); } catch (e) { try { d.exec('ROLLBACK'); } catch (e2) {} return json(500, { error: 'reorder' }); }
+        return json(200, { ok: true });
+      }
       m = /^\/playlists\/(\d+)\/tracks\/([A-Za-z0-9_-]{11})$/.exec(route);
       if (m && req.method === 'DELETE') {
         const pid = Number(m[1]);
         if (!d.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').get(pid, u.id)) return json(404, { error: 'playlist' });
         d.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND video_id = ?').run(pid, m[2]);
+        purgeMoods(u.id);
+        purgeMixes(u.id);
         return json(200, { ok: true });
       }
 
+      if (route === '/moods' && req.method === 'GET') {
+        const lb = url.searchParams.get('lang');
+        const lang = lb === 'fr' || lb === 'en' || lb === 'es' ? lb : 'en';
+        const r = moodsPour(d, u.id, lang);
+        return json(200, { v: MOODS_VERSION, lang, cold: r.cold, moods: r.moods, artists: r.artists });
+      }
       if (route === '/likes' && req.method === 'GET') {
         const ls = d.prepare('SELECT l.video_id, l.title, l.artist, COALESCE(tm.duration, 0) AS duration FROM likes l LEFT JOIN track_meta tm ON tm.video_id = l.video_id WHERE l.user_id = ? ORDER BY l.added_at DESC').all(u.id);
         const idsL = ls.map((l) => l.video_id);
         const connuesL = dureesConnues(d, idsL);
-        if (idsL.slice(0, 10).some((id) => !connuesL.has(id) && !Number(ls.find((x) => x.video_id === id).duration))) dureesManquantes(d, idsL).catch(() => {});
+        const manquantsL = idsL.filter((id) => !connuesL.has(id)).slice(0, 60);
+        if (manquantsL.length) dureesManquantes(d, manquantsL).catch(() => {});
         return json(200, ls.map((l) => ({ videoId: l.video_id, title: l.title, artist: l.artist, duration: Number(l.duration) || connuesL.get(l.video_id) || 0 })));
       }
       if (route === '/likes' && req.method === 'POST') {
@@ -579,8 +926,10 @@ export function handleMusique(req, res, path, url) {
         d.prepare('INSERT OR IGNORE INTO likes (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, vid, b.title || '', b.artist || '');
         try {
           const pid = listeAimes(d, u.id);
-          d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(pid, vid, b.title || '', b.artist || '');
+          d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist, position) VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = ?), 0))').run(pid, vid, b.title || '', b.artist || '', pid);
         } catch (e) {}
+        purgeMoods(u.id);
+        purgeMixes(u.id);
         return json(200, { ok: true, videoId: vid });
       }
       m = /^\/likes\/([A-Za-z0-9_-]{11})$/.exec(route);
@@ -590,6 +939,8 @@ export function handleMusique(req, res, path, url) {
           const pid = listeAimes(d, u.id);
           d.prepare('DELETE FROM playlist_tracks WHERE playlist_id = ? AND video_id = ?').run(pid, m[1]);
         } catch (e) {}
+        purgeMoods(u.id);
+        purgeMixes(u.id);
         return json(200, { ok: true });
       }
 
@@ -599,11 +950,21 @@ export function handleMusique(req, res, path, url) {
         const action = String(b.action || 'dismiss');
         if (!/^[A-Za-z0-9_-]{11}$/.test(vid) || (action !== 'dismiss' && action !== 'like')) return json(400, { error: 'parametres' });
         d.prepare('INSERT INTO reco_feedback (user_id, video_id, action) VALUES (?, ?, ?) ON CONFLICT(user_id, video_id) DO UPDATE SET action = excluded.action, at = datetime(\'now\')').run(u.id, vid, action);
-        if (action === 'like') d.prepare('INSERT OR IGNORE INTO likes (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, vid, '', '');
+        if (action === 'like') {
+          const meta = metaConnue(d, vid);
+          d.prepare('INSERT OR IGNORE INTO likes (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, vid, (meta && meta.title) || '', (meta && meta.artist) || '');
+          if (!meta) majMetaAsync(vid);
+          try {
+            const pid = listeAimes(d, u.id);
+            d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist, position) VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = ?), 0))').run(pid, vid, (meta && meta.title) || '', (meta && meta.artist) || '', pid);
+          } catch (e) {}
+        }
         d.prepare('DELETE FROM reco_cache WHERE user_id = ?').run(u.id);
         mixCache.delete(u.id + ':' + 30);
         for (const k of Array.from(mixCache.keys())) { if (k.indexOf(u.id + ':') === 0) mixCache.delete(k); }
         mixesCache.delete(u.id);
+        purgeMoods(u.id);
+        purgeMixes(u.id);
         lancerRecos(u.id);
         return json(200, { ok: true, action });
       }
@@ -613,14 +974,14 @@ export function handleMusique(req, res, path, url) {
 
       if (route === '/history' && req.method === 'GET') {
         const n = entier(url.searchParams.get('n'), 50, 1, 200);
-        const h = d.prepare('SELECT h.video_id, h.title, h.artist, h.at, COALESCE(tm.duration, 0) AS duration FROM history h LEFT JOIN track_meta tm ON tm.video_id = h.video_id WHERE h.user_id = ? ORDER BY h.at DESC LIMIT ?').all(u.id, n);
+        const h = d.prepare('SELECT video_id, title, artist, at, duration FROM (SELECT h.video_id, h.title, h.artist, h.at, COALESCE(tm.duration, 0) AS duration, ROW_NUMBER() OVER (PARTITION BY h.video_id ORDER BY h.at DESC, h.id DESC) AS rn FROM history h LEFT JOIN track_meta tm ON tm.video_id = h.video_id WHERE h.user_id = ?) WHERE rn = 1 ORDER BY at DESC LIMIT ?').all(u.id, n);
         return json(200, h.map((x) => ({ videoId: x.video_id, title: x.title, artist: x.artist, at: x.at, duration: Number(x.duration) || 0 })));
       }
       if (route === '/history' && req.method === 'POST') {
         const b = await corps(req);
         const vid = String(b.videoId || '');
         if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) return json(400, { error: 'videoId' });
-        d.prepare('INSERT INTO history (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, vid, texte(b.title, 300), texte(b.artist, 300));
+        pousseHistory(d, u.id, vid, b.title, b.artist, b.duration);
         return json(200, { ok: true });
       }
 
@@ -629,6 +990,22 @@ export function handleMusique(req, res, path, url) {
         if (!/^[A-Za-z0-9_-]{10,80}$/.test(list)) return json(400, { error: 'list' });
         try { return json(200, await ytPlaylist(list)); } catch (e) { return json(502, { error: 'playlist introuvable' }); }
       }
+      if (route === '/stats' && req.method === 'GET') {
+        const mois = entier(url.searchParams.get('months'), 6, 1, 24);
+        return json(200, statsPour(d, u.id, mois));
+      }
+      m = /^\/smart\/(top|recent|never)$/.exec(route);
+      if (m && req.method === 'GET') {
+        const tracks = smartPour(d, u.id, m[1]);
+        if (!tracks) return json(404, { error: 'smart' });
+        return json(200, { key: m[1], tracks });
+      }
+      if (route === '/radio') {
+        const seed = String(url.searchParams.get('seed') || '').trim();
+        if (!seed || seed.length > 100) return json(400, { error: 'seed' });
+        const n = entier(url.searchParams.get('n'), 30, 1, 60);
+        return json(200, await radio(u.id, seed, n));
+      }
       if (route === '/recos') {
         const n = entier(url.searchParams.get('n'), 20, 1, 50);
         return json(200, await recos(u.id, n));
@@ -636,6 +1013,11 @@ export function handleMusique(req, res, path, url) {
       if (route === '/mix') {
         const n = entier(url.searchParams.get('n'), 30, 1, 60);
         return json(200, await mix(u.id, n));
+      }
+      if (route === '/mixes2' && req.method === 'GET') {
+        const resp = mixes2sync(u.id);
+        void warmMixes(u.id);
+        return json(200, resp);
       }
       if (route === '/mixes') {
         return json(200, await mixes(u.id));
@@ -657,4 +1039,4 @@ export function handleMusique(req, res, path, url) {
 }
 
 // Export reserved for unit tests (pure functions).
-export const internals = { melanger, uniques, FILTRE_MIXTE, RECOS_VERSION };
+export const internals = { melanger, uniques, FILTRE_MIXTE, RECOS_VERSION, moodsCache, purgeMixes, ecrireWarm, composerMixes, get ytActifs() { return ytActifs; }, get warmLances() { return warmLances; }, get compteSqlMixes() { return compteSqlMixes; }, get mixEpoch() { return mixEpoch; } };

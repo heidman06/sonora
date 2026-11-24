@@ -41,6 +41,15 @@ await check('page /musique/ 200', async () => {
   const r = await req('/musique/');
   assert(r.status === 200, 'status ' + r.status);
   const html = r.buf.toString('utf8');
+  assert(html.indexOf('assets/index-') > 0, 'bundle React absent');
+  assert(html.indexOf('id="root"') > 0, 'root absent');
+  return { bytes: r.buf.length };
+});
+
+await check('page legacy /musique-legacy/ 200', async () => {
+  const r = await req('/musique-legacy/');
+  assert(r.status === 200, 'status ' + r.status);
+  const html = r.buf.toString('utf8');
   assert(html.indexOf('app.js') > 0, 'app.js absent');
   assert(html.indexOf('engine.js') > 0, 'engine.js absent');
   return { bytes: r.buf.length };
@@ -65,6 +74,19 @@ await check('POST /api/mus/login', async () => {
 await check('GET /api/mus/me', async () => {
   const r = await req('/api/mus/me');
   assert(r.status === 200 && r.json.user.username === 'heid', 'me invalide');
+});
+
+await check('GET /api/mus/mixes2 forme v2', async () => {
+  const r = await req('/api/mus/mixes2');
+  assert(r.status === 200, 'status ' + r.status);
+  assert(r.json && r.json.v === 1 && Array.isArray(r.json.mixes), 'forme v2 absente');
+  assert(r.json.mixes.length <= 12, 'trop de mixes');
+  for (const m of r.json.mixes) {
+    assert(m.count === m.tracks.length, 'count != tracks');
+    assert(m.cover.length === Math.min(4, m.tracks.length), 'cover');
+    assert(!(m.subtitleKey && m.seeds && m.seeds.length), 'XOR subtitle/seeds');
+  }
+  return { mixes: r.json.mixes.length, cold: r.json.cold };
 });
 
 await check('GET /api/mus/me sans token = 401', async () => {

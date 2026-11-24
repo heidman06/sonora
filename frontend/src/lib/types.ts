@@ -13,8 +13,6 @@ export interface AuthResponse { token: string; user: { id: number; username: str
 export interface PlaylistSummary { id: number; name: string; count: number; cover: string[] }
 export interface PlaylistDetail { id: number; name: string; tracks: Track[] }
 
-export interface MixSummary { key: string; name: string; count: number; cover: string[]; tracks?: Track[] }
-
 export interface HistoryItem extends Track { at?: string }
 
 export interface PipedItem {
@@ -35,6 +33,7 @@ export interface SearchResponse {
 }
 
 export interface DownloadRecord {
+  missing?: boolean
   id: string
   title: string
   artist?: string
@@ -45,3 +44,11 @@ export interface DownloadRecord {
 }
 
 export type Lang = 'fr' | 'en' | 'es'
+
+export interface MixSeed { t: 'key' | 'artist'; v: string }
+export interface MixSummary { key: string; labelKey: string; moodId?: string; n?: number; subtitleKey?: string; seeds: MixSeed[]; count: number; cover: string[]; tracks: Track[] }
+export interface MixesResponse { v: number; cold: boolean; seed: string; mixes: MixSummary[] }
+
+export interface Mood { id: string; labelKey: string; q: string; score?: number }
+export interface MoodArtist { name: string; q: string }
+export interface MoodsResponse { v: number; lang: Lang; cold: boolean; moods: Mood[]; artists: MoodArtist[] }

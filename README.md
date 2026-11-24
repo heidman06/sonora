@@ -11,9 +11,19 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 ## Features
 
 - **Mix radio**: 30 tracks blending discoveries, likes, history and playlists
-- **Daily Mixes**: Discoveries / On repeat / Favorites
+- **Personalized daily mixes (Spotify-style)**: 8–12 mixes per account (daily mixes per top artist, mood mixes, discoveries, on-repeat, favorites, archives, rotation, playlist shuffle), 15–60 tracks each, 2×2 mosaic covers, localized names/subtitles; fully computed from the account's own likes/history/playlists with zero blocking network calls
+- **Per-account moods & search chips**: exploration chips and empty-search suggestions scored from each account's tastes and localized per UI language (FR/EN/ES markets); a fresh account gets a localized static catalog
+- **Mixes browser**: `#/mixes` grid + per-mix detail with batched track list and restored scroll position
 - **Recommendations v3**: Piped related tracks + weighted artist affinities, versioned cache, stale-while-revalidate
 - **Recommendation feedback**: dismiss (x) or like recommendations directly from the home screen
+- **Synced lyrics** (lrclib) with plain-text fallback and offline cache
+- **Sleep timer** (end-of-track or minutes), **equal-power crossfade** (direct mode), **playback speed** 0.75–1.5×
+- **Per-track / per-artist radio** and Subsonic `getSimilarSongs2` for CarPlay
+- **Smart playlists** (most played / recently added / never played) and **listening stats** (`#/stats`)
+- **Resilient offline downloads**: IndexedDB blobs + localStorage manifest; if the OS evicts storage, the list is restored and playing a track re-downloads it automatically
+- **No autoplay on reopen**: cold start restores the queue paused; playback only resumes on a user gesture
+- **Service worker**: offline app boot, hashed-asset precache, update banner without interrupting playback
+- **Self-hosted alerts**: optional ntfy timer (cookies expiry, smoke failures, cache pressure) with 6 h dedup
 - **Subsonic gateway** for **CarPlay / Amperfy**: playlists, albums, artists, search, artwork, streaming
 - **Offline downloads**: IndexedDB blob storage, playback without network
 - **Real durations** for playlists, likes, history and Subsonic
@@ -26,16 +36,24 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 
 <table>
   <tr>
-    <td align="center"><img src="docs/screenshots/home-mobile.png" width="250" alt="Sonora home"><br><sub>Home and Daily Mixes</sub></td>
-    <td align="center"><img src="docs/screenshots/player-mobile.png" width="250" alt="Sonora player"><br><sub>Full-screen player</sub></td>
-    <td align="center"><img src="docs/screenshots/library-mobile.png" width="250" alt="Sonora library"><br><sub>Library and downloads</sub></td>
+    <td align="center"><img src="docs/screenshots/home-mobile.png" width="250" alt="Sonora home on iPhone"><br><sub>iPhone — home, personalized mixes</sub></td>
+    <td align="center"><img src="docs/screenshots/player-mobile.png" width="250" alt="Sonora player on iPhone"><br><sub>iPhone — full-screen player</sub></td>
+    <td align="center"><img src="docs/screenshots/library-mobile.png" width="250" alt="Sonora library on iPhone"><br><sub>iPhone — library and downloads</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/mixes-mobile.png" width="250" alt="Sonora mixes grid on iPhone"><br><sub>iPhone — all mixes</sub></td>
+    <td align="center"><img src="docs/screenshots/search-mobile.png" width="250" alt="Sonora search chips on iPhone"><br><sub>iPhone — personalized search chips</sub></td>
+    <td align="center"><img src="docs/screenshots/desktop-panel.png" width="250" alt="Sonora desktop now-playing panel"><br><sub>Desktop ≥1500 px — now-playing panel</sub></td>
   </tr>
   <tr>
     <td colspan="3" align="center"><img src="docs/screenshots/desktop-light.png" width="820" alt="Sonora desktop light theme"><br><sub>Desktop, light theme</sub></td>
   </tr>
+  <tr>
+    <td colspan="3" align="center"><img src="docs/screenshots/desktop-dark.png" width="820" alt="Sonora desktop dark theme"><br><sub>Desktop, dark theme</sub></td>
+  </tr>
 </table>
 
-The app UI is available in English (default), French and Spanish; the documentation is in English. Screenshots use a demo account.
+The app UI is available in English (default), French and Spanish; the documentation is in English. Screenshots: iPhone (390×844 @3x) and desktop (1440×900 / 1600×900), v2.4.4.
 
 ## React client
 
@@ -53,10 +71,14 @@ The Docker image ships the prebuilt React client in `/app/web` and the legacy cl
 
     web/ (built React client)  ->  Node hub (API /api/mus, /subsonic/rest, /musique/dl)
                                 |
-                                +- server/musique.mjs (auth, playlists, likes, history, recos, Mix)
+                                +- server/musique.mjs (auth, playlists, likes, history, recos, Mix, mixes2, moods, stats)
+                                +- server/musique-mixes.mjs (pure personalized-mix builder, seeded determinism)
+                                +- server/musique-moods.mjs (pure mood scoring, localized catalogs)
                                 +- server/subsonic.mjs (CarPlay gateway)
                                 +- server/durees.mjs (duration cache via Piped)
+                                +- server/hls.mjs (iOS background HLS queue)
                                 +- server/audio.mjs (yt-dlp cache, Range 206, progressive streaming)
+                                +- server/alertes.mjs (optional ntfy self-hosted alerts)
 
 Storage: SQLite (node:sqlite) + yt-dlp m4a cache + optional Piped instance.
 
@@ -95,7 +117,8 @@ Full guide: [docs/CARPLAY.md](docs/CARPLAY.md).
 
 ## Tests and load
 
-    npm test                  # 18 tests (recos, API, Subsonic, input validation)
+    npm test                  # 62 server tests (recos, mixes, moods, API, Subsonic, validation)
+    npm --prefix frontend test  # 91 client tests (vitest: selectors, i18n, sleep, crossfade, caches)
     npm run load              # optional load test (SONORA_USER/PASSWORD required)
 
 ## Documentation
@@ -105,6 +128,8 @@ Full guide: [docs/CARPLAY.md](docs/CARPLAY.md).
 - [Open-source checklist](docs/OSS-CHECKLIST.md)
 - [Publishing guide](docs/PUBLISH.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Design notes: scale & playlists](docs/DESIGN-echelle-playlists.md), [signature features](docs/DESIGN-features-signature.md), [visual refresh](docs/DESIGN-refonte-visuelle.md), [personalized moods](docs/DESIGN-moods-personnalises.md), [personalized mixes](docs/DESIGN-mixes-personnalises.md)
+- [Known limitations](docs/LIMITATIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)

@@ -2,11 +2,11 @@
 // Legacy auth: u + p (p=enc:hex accepted). Token auth: u + t + s if the dedicated
 // password is provided in SONORA_SONIC_USERS="user:pass,user2:pass2".
 import { createHash } from 'node:crypto';
-import { ouvrirBase, identifiants, lancerYtdlp } from './musique.mjs';
+import { ouvrirBase, identifiants, lancerYtdlp, metaConnue, majMetaAsync, pousseHistory, radioImmediate } from './musique.mjs';
 import { dureesConnues, dureesManquantes } from './durees.mjs';
 
 const VERSION = '1.16.1';
-const PIPED = (process.env.PIPED_URL || 'http://127.0.0.1:8081').replace(/\/$/, '');
+const PIPED = (process.env.PIPED_URL ?? 'http://127.0.0.1:8081').replace(/\/$/, '');
 const SONIC_USERS = new Map(
   String(process.env.SONORA_SONIC_USERS || process.env.SUBSONIC_USERS || '')
     .split(',').map((x) => x.trim()).filter(Boolean)
@@ -95,14 +95,14 @@ function chanson(videoId, titre, artiste, opts) {
 function listePlaylists(d, userId) {
   const ps = d.prepare('SELECT id, name, created_at FROM playlists WHERE user_id = ? ORDER BY name').all(userId);
   return ps.map((p) => {
-    const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ?').all(p.id);
+    const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY (position IS NULL), position').all(p.id);
     return { id: 'pl-' + p.id, name: p.name, comment: '', owner: '', public: false, songCount: tr.length, duration: 0, created: p.created_at || '', changed: '', coverArt: tr[0] ? tr[0].video_id : '' };
   });
 }
 function albumsPlaylists(d, userId) {
   const ps = d.prepare('SELECT id, name, created_at FROM playlists WHERE user_id = ? ORDER BY name').all(userId);
   return ps.map((p) => {
-    const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ?').all(p.id);
+    const tr = d.prepare('SELECT video_id FROM playlist_tracks WHERE playlist_id = ? ORDER BY (position IS NULL), position').all(p.id);
     let duration = 0;
     try {
       const ids = tr.map((x) => x.video_id);
@@ -122,7 +122,7 @@ function albumsPlaylists(d, userId) {
 async function playlistComplete(d, userId, pid) {
   const p = d.prepare('SELECT id, name FROM playlists WHERE id = ? AND user_id = ?').get(pid, userId);
   if (!p) return null;
-  const tr = d.prepare('SELECT video_id, title, artist FROM playlist_tracks WHERE playlist_id = ? ORDER BY added_at DESC').all(pid);
+  const tr = d.prepare('SELECT video_id, title, artist FROM playlist_tracks WHERE playlist_id = ? ORDER BY (position IS NULL), position').all(pid);
   const ids = tr.map((x) => x.video_id);
   const durees = dureesConnues(d, ids);
   if (ids.slice(0, 10).some((id) => !durees.has(id))) dureesManquantes(d, ids).catch(() => {});
@@ -142,7 +142,7 @@ async function recherche(q) {
 }
 function requetePiped(path) {
   if (!PIPED) return Promise.resolve(null);
-  return fetch(PIPED + path, { timeout: 8000 }).then((r) => r.ok ? r.json() : null).catch(() => null);
+  return fetch(PIPED + path, { signal: AbortSignal.timeout(8000) }).then((r) => r.ok ? r.json() : null).catch(() => null);
 }
 
 export async function handleSubsonic(req, res, path, urlRecue) {
@@ -172,7 +172,7 @@ export async function handleSubsonic(req, res, path, urlRecue) {
       const id = String(url.searchParams.get('id') || '');
       const vid = (id.match(/[A-Za-z0-9_-]{11}/) || [id])[0];
       try {
-        const r = await fetch('https://i.ytimg.com/vi/' + vid + '/mqdefault.jpg', { timeout: 10000 });
+        const r = await fetch('https://i.ytimg.com/vi/' + vid + '/mqdefault.jpg', { signal: AbortSignal.timeout(10000) });
         if (!r.ok) return echec(res, 70, 'Cover introuvable'), true;
         const buf = Buffer.from(await r.arrayBuffer());
         res.writeHead(200, { 'Content-Type': r.headers.get('content-type') || 'image/jpeg', 'Cache-Control': 'public, max-age=86400', 'Content-Length': buf.length });
@@ -222,14 +222,21 @@ export async function handleSubsonic(req, res, path, urlRecue) {
     if (methode === 'star' || methode === 'unstar') {
       const id = String(url.searchParams.get('id') || '');
       if (/^[A-Za-z0-9_-]{11}$/.test(id)) {
-        if (methode === 'star') d.prepare('INSERT OR IGNORE INTO likes (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, id, '', '');
-        else d.prepare('DELETE FROM likes WHERE user_id = ? AND video_id = ?').run(u.id, id);
+        if (methode === 'star') {
+          const meta = metaConnue(d, id);
+          d.prepare('INSERT OR IGNORE INTO likes (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, id, (meta && meta.title) || '', (meta && meta.artist) || '');
+          if (!meta) majMetaAsync(id);
+        } else d.prepare('DELETE FROM likes WHERE user_id = ? AND video_id = ?').run(u.id, id);
       }
       return repondre(req, res, {}), true;
     }
     if (methode === 'scrobble') {
       const id = String(url.searchParams.get('id') || '');
-      if (/^[A-Za-z0-9_-]{11}$/.test(id)) d.prepare('INSERT INTO history (user_id, video_id, title, artist) VALUES (?, ?, ?, ?)').run(u.id, id, '', '');
+      if (/^[A-Za-z0-9_-]{11}$/.test(id)) {
+        const meta = metaConnue(d, id);
+        pousseHistory(d, u.id, id, (meta && meta.title) || '', (meta && meta.artist) || '');
+        if (!meta) majMetaAsync(id);
+      }
       return repondre(req, res, {}), true;
     }
     if (methode === 'getUser') return repondre(req, res, { user: { username: u.username, email: '', scrobblingEnabled: false, adminRole: false, settingsRole: false, downloadRole: true, uploadRole: false, playlistRole: true, coverArtRole: false, commentRole: false, podcastRole: false, shareRole: false, videoConversionRole: false } }), true;
@@ -250,7 +257,13 @@ export async function handleSubsonic(req, res, path, urlRecue) {
     }
     if (methode === 'getOpenSubsonicExtensions') return repondre(req, res, { openSubsonicExtensions: { openSubsonicExtension: [] } }), true;
     if (methode === 'getGenres') return repondre(req, res, { genres: { genre: [] } }), true;
-    if (methode === 'getSimilarSongs2' || methode === 'getSimilarSongs') return repondre(req, res, { similarSongs2: { song: [] } }), true;
+    if (methode === 'getSimilarSongs2' || methode === 'getSimilarSongs') {
+      const id = String(url.searchParams.get('id') || '');
+      const songs = /^[A-Za-z0-9_-]{11}$/.test(id)
+        ? radioImmediate(d, u.id, id, 20).map((x) => chanson(x.videoId, x.title, x.artist, { duration: x.duration || 0 }))
+        : [];
+      return repondre(req, res, { similarSongs2: { song: songs } }), true;
+    }
     if (methode === 'getLyricsBySongId' || methode === 'getLyrics') return repondre(req, res, methode === 'getLyrics' ? { lyrics: { artist: '', title: '', value: '' } } : { lyricsList: { structuredLyrics: [] } }), true;
     if (methode === 'getPodcasts') return repondre(req, res, { podcasts: { channel: [] } }), true;
     if (methode === 'getNewestPodcasts') return repondre(req, res, { newestPodcasts: { episode: [] } }), true;

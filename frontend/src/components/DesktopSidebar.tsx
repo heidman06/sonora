@@ -1,10 +1,11 @@
-import type { PlayerState } from '../audio/engine'
+import type { UiState } from '../audio/usePlayer'
 import type { Route } from '../lib/hooks'
 import type { Lang } from '../lib/types'
 import { tr } from '../lib/i18n'
 import { Icon } from './Icon'
+import { Art } from './Art'
 
-interface Props { lang: Lang; state: PlayerState; route: Route }
+interface Props { lang: Lang; state: UiState; route: Route }
 
 export function DesktopSidebar({ lang, state, route }: Props) {
   const nav = [
@@ -30,7 +31,7 @@ export function DesktopSidebar({ lang, state, route }: Props) {
       <div className="side-playlists">
         {state.playlists.slice(0, 8).map((playlist) => (
           <a className="side-playlist" key={playlist.id} href={'#/playlist/' + playlist.id}>
-            <img src={playlist.cover?.[0] ? 'https://i.ytimg.com/vi/' + playlist.cover[0] + '/mqdefault.jpg' : ''} alt="" />
+            <Art id={playlist.cover?.[0]} />
             <span>{playlist.name}</span>
           </a>
         ))}

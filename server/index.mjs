@@ -48,7 +48,7 @@ async function proxyPiped(req, res, path, search) {
     return;
   }
   try {
-    const r = await fetch(PIPED + path + search, { timeout: 15000 });
+    const r = await fetch(PIPED + path + search, { signal: AbortSignal.timeout(15000) });
     const body = Buffer.from(await r.arrayBuffer());
     if (r.ok) pipedCache.set(cle, { at: Date.now(), body });
     res.writeHead(r.status, { 'Content-Type': r.headers.get('content-type') || 'application/json', 'Cache-Control': 'public, max-age=300' }).end(body);

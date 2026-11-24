@@ -1,5 +1,7 @@
 // Sonora - HLS queue for background playback on iOS.
-import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync } from 'node:fs';
+import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, utimesSync } from 'node:fs';
+import { ouvrirBase } from './musique.mjs';
+import { dureesConnues } from './durees.mjs';
 import { join, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -63,9 +65,14 @@ function genererTs(id, d, port, ffmpeg) {
 }
 
 function genererSilence(id, d, ffmpeg, duree) {
-  const dest = join(d, id + '.ts');
-  if (existsSync(dest) && statSync(dest).size > 1000) return Promise.resolve(dest);
-  const tmp = dest + '.silence.part';
+  // Separate name + short TTL: a transient failure must not silence a track forever.
+  const dest = join(d, id + '.silence.ts');
+  if (existsSync(dest)) {
+    const st = statSync(dest);
+    if (st.size > 1000 && Date.now() - st.mtimeMs < 10 * 60 * 1000) return Promise.resolve(dest);
+    try { unlinkSync(dest); } catch (e) {}
+  }
+  const tmp = dest + '.part';
   return new Promise((resolve, reject) => {
     const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo', '-t', String(duree), '-c:a', 'aac', '-b:a', '48k', '-f', 'mpegts', tmp], { stdio: 'ignore' });
     const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 30000);
@@ -82,6 +89,7 @@ function genererSilence(id, d, ffmpeg, duree) {
 
 function servirFichier(req, res, fichier) {
   const taille = statSync(fichier).size;
+  try { utimesSync(fichier, new Date(), new Date()); } catch (e) {} // keep eviction LRU honest
   const portee = req.headers.range;
   if (portee && /^bytes=\d*-\d*$/.test(portee)) {
     const [a, b] = portee.replace('bytes=', '').split('-');
@@ -111,7 +119,12 @@ export async function handleHls(req, res, path, url, opts) {
     const ids = String(url.searchParams.get('ids') || '').split(',').filter((x) => VID.test(x)).slice(0, 60);
     if (!ids.length) { res.writeHead(400, { 'Content-Type': 'text/plain' }).end('ids'); return true; }
     const dursBrutes = String(url.searchParams.get('durs') || '').split(',');
+    // Server-side real durations win over client estimates (track_meta cache).
+    let connus = new Map();
+    try { connus = dureesConnues(ouvrirBase(), ids); } catch (e) {}
     const durs = ids.map((x, i) => {
+      const reel = connus.get(x);
+      if (reel && reel >= 5) return Math.min(3600, Math.round(reel));
       const n = Number(dursBrutes[i]);
       return Number.isFinite(n) && n >= 5 ? Math.min(3600, Math.round(n)) : 240;
     });
@@ -131,7 +144,7 @@ export async function handleHls(req, res, path, url, opts) {
     const n = Number(url.searchParams.get('d'));
     const duree = Number.isFinite(n) && n >= 5 ? Math.min(3600, Math.round(n)) : 240;
     try {
-      const f = await genererTs(id, d, port, ffmpeg, duree);
+      const f = await genererTs(id, d, port, ffmpeg);
       servirFichier(req, res, f);
     } catch (e) {
       try {

@@ -1,0 +1,22 @@
+{
+  "baseline": [
+    775.0999999940395,
+    299,
+    587.0999999940395
+  ],
+  "baselineMedianMs": 587.1,
+  "longtasksOver100ms": 0,
+  "frameMedianMs": 16.7,
+  "domLibraryCold": 20,
+  "domLikedCold": 100,
+  "panelNodesAt1600": 48,
+  "panelAt1440": false,
+  "emptyIlluNodes": 7,
+  "offlineBoot": true,
+  "offlineInter": true,
+  "reduceOpacityAt0": 1,
+  "fontsTransferredBytes": 48256,
+  "paletteMs": 1.9,
+  "surrogate": "desktop headless 390x844@2x, throttling x4 pour A1.0 — NON VÉRIFIÉ MOBILE RÉEL",
+  "version": "2.2.2"
+}

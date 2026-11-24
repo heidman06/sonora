@@ -1,34 +1,36 @@
-import type { Track } from '../lib/types'
+import { memo } from 'react'
+import type { Lang, Track } from '../lib/types'
+import { tr } from '../lib/i18n'
+import { formatTime } from '../lib/time'
 import { Icon } from './Icon'
+import { Art } from './Art'
 
 interface Props {
   track: Track
   index: number
-  queue: Track[]
-  onPlay: (track: Track, queue: Track[], index: number) => void
+  lang: Lang
   liked: boolean
-  onLike: (track: Track) => void
   isCurrent?: boolean
-  durationLabel: (seconds: number) => string
-  onRemove?: (track: Track) => void
+  removable?: boolean
+  menu?: boolean
 }
 
-export function TrackRow({ track, index, queue, onPlay, liked, onLike, isCurrent, durationLabel, onRemove }: Props) {
+// No per-row closures: actions are delegated by TrackList via data-action (design N1/S0).
+export const TrackRow = memo(function TrackRow({ track, index, lang, liked, isCurrent, removable, menu }: Props) {
   return (
-    <div className={'track' + (isCurrent ? ' is-current' : '')} role="button" tabIndex={0}
-      onClick={() => onPlay(track, queue, index)}
-      onKeyDown={(e) => { if (e.key === 'Enter') onPlay(track, queue, index) }}>
-      <img className="track-art" src={track.thumb || ''} alt="" loading="lazy" />
+    <div className={'track' + (isCurrent ? ' is-current playing' : '')} role="button" tabIndex={0} data-action="play" data-id={track.id} data-index={index}>
+      <Art id={track.id} className="track-art" />
+      {isCurrent && <span className="eq" aria-hidden="true"><i /><i /><i /></span>}
       <div className="track-txt">
         <div className="track-title">{track.title}</div>
         <div className="track-sub">{track.artist || ''}</div>
       </div>
-      <button className={'tlike' + (liked ? ' liked' : '')} type="button"
-        aria-label="Favori" onClick={(e) => { e.stopPropagation(); onLike(track) }}>
+      <button className={'tlike' + (liked ? ' liked' : '')} type="button" data-action="like" data-id={track.id} data-index={index} aria-label={tr(lang, 'liked')}>
         <Icon name={liked ? 'heartFill' : 'heart'} size={15} />
       </button>
-      {onRemove && <button className="tremove" type="button" aria-label="Retirer" onClick={(e) => { e.stopPropagation(); onRemove(track) }}><Icon name="trash" size={14} /></button>}
-      <span className="track-dur">{durationLabel(track.duration || 0)}</span>
+      {menu && <button className="tmenu" type="button" data-action="menu" data-id={track.id} data-index={index} aria-label={tr(lang, 'menu')}><Icon name="dots" size={15} /></button>}
+      {removable && <button className="tremove" type="button" data-action="remove" data-id={track.id} data-index={index} aria-label={tr(lang, 'remove')}><Icon name="trash" size={14} /></button>}
+      <span className="track-dur">{formatTime(track.duration || 0)}</span>
     </div>
   )
-}
+})

@@ -29,7 +29,10 @@ Accounts are defined in the server data directory (musique-users.txt, chmod 600)
 
     GET  /recos?n=20                          -> recommendation items
     GET  /mix?n=30                            -> Mix radio items
-    GET  /mixes                               -> 3 daily mixes
+    GET  /mixes                               -> 3 daily mixes (contrat v1 legacy, inchange)
+    GET  /mixes2                              -> {v,cold,seed,mixes[<=12]{key,labelKey,moodId,n,subtitleKey|seeds,count,cover,tracks}} (personnalise par compte, cache 45 min + seed jour, warm daily-only cooldown 6 h)
+    GET  /moods?lang=fr|en|es                 -> {v,lang,cold,moods[14]{id,labelKey,q,score},artists[<=2]{name,q}}
+                                               (cache compte+langue TTL 30 min ; purge sur like/feedback/éditions playlist ; scoring local sans réseau)
     POST /feedback         {videoId,action}   -> {ok} (action: dismiss|like)
     GET  /feedback                            -> [{video_id,action,at}]
 

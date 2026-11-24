@@ -1,18 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { engine } from '../audio/engine'
-import type { PlayerState } from '../audio/engine'
+import type { UiState } from '../audio/usePlayer'
 import type { Lang, PipedItem, Track } from '../lib/types'
 import { pipedTrack, videoIdOf } from '../lib/api'
 import { tr } from '../lib/i18n'
 import { navigate } from '../lib/hooks'
 import { Icon } from '../components/Icon'
-import { TrackRow } from '../components/TrackRow'
+import { TrackList } from '../components/TrackList'
+import { EmptyState } from '../components/EmptyState'
+import { catalogueStatique, lireMoodsCache, ecrireMoodsCache } from '../lib/moods'
+import type { MoodsResponse } from '../lib/types'
 
 interface Props {
   lang: Lang
-  state: PlayerState
+  state: UiState
   query: string
   onPlay: (track: Track, queue: Track[], index: number) => void
+  onMenu?: (t: Track) => void
 }
 
 const FILTERS = [
@@ -22,7 +26,7 @@ const FILTERS = [
   { key: 'music_artists', label: 'artists' },
 ] as const
 
-export function SearchView({ lang, state, query, onPlay }: Props) {
+export function SearchView({ lang, state, query, onMenu }: Props) {
   const [text, setText] = useState(query)
   const [filter, setFilter] = useState('music_songs')
   const [items, setItems] = useState<PipedItem[]>([])
@@ -30,7 +34,22 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
   const [nextpage, setNextpage] = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [retry, setRetry] = useState(0)
   const api = engine.api
+  const [perso, setPerso] = useState<MoodsResponse | null>(() => (state.token ? lireMoodsCache(state.user, lang) : null))
+  useEffect(() => {
+    let alive = true
+    if (!state.token) { setPerso(null); return }
+    const c = lireMoodsCache(state.user, lang)
+    if (c) { setPerso(c); return }
+    api.moods(lang).then((r) => { if (alive) { setPerso(r); ecrireMoodsCache(state.user, lang, r) } }).catch(() => {})
+    return () => { alive = false }
+  }, [state.token, state.user, lang, api])
+  const chips = perso && !perso.cold
+    ? [...perso.moods.filter((m) => (m.score || 0) > 0).slice(0, 4).map((m) => ({ label: tr(lang, m.labelKey), q: m.q })), ...perso.artists.slice(0, 2).map((a) => ({ label: a.name, q: a.q }))]
+    : catalogueStatique(lang).slice(0, 6).map((m) => ({ label: tr(lang, m.labelKey), q: m.q }))
+  const likedIds = useMemo(() => new Set(state.likes.map((t) => t.id)), [state.likes])
   const timer = useRef<number | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const suggestOpen = useRef(false)
@@ -43,15 +62,16 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
     if (!query.trim()) { setItems([]); setTracks([]); return }
     let alive = true
     setLoading(true)
+    setError(false)
     api?.search(query, filter).then((data) => {
       if (!alive) return
       setItems(data.items || [])
       setNextpage(data.nextpage || '')
       setTracks((data.items || []).filter((x) => x.type === 'stream').map(pipedTrack).filter((t) => t.id))
       setLoading(false)
-    }).catch(() => { if (alive) { setLoading(false); setItems([]); setTracks([]) } })
+    }).catch(() => { if (alive) { setLoading(false); setItems([]); setTracks([]); setError(true) } })
     return () => { alive = false }
-  }, [query, filter, api])
+  }, [query, filter, api, retry])
 
   const submit = (value: string) => {
     const q = value.trim()
@@ -100,7 +120,7 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
           onFocus={() => { if (text.trim() && suggestions.length) suggestOpen.current = true }}
           onKeyDown={(e) => { if (e.key === 'Enter') submit(text) }} />
         {suggestions.length > 0 && (
-          <div className="segmented" id="filters">
+          <div className="segmented" id="suggestions">
             {suggestions.slice(0, 7).map((s) => (
               <button key={s} onClick={() => { setText(s); submit(s) }}><Icon name="search" size={15} />{s}</button>
             ))}
@@ -113,22 +133,29 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
         ))}
       </div>
       <div id="results" className="list">
-        {!query.trim() && <div className="empty"><Icon name="search" size={34} /><div>{tr(lang, 'searchHint')}</div></div>}
+        {!query.trim() && <EmptyState lang={lang} icon="search" titleKey="searchTitle" hintKey="searchHint" />}
+        {!query.trim() && chips.length > 0 && (
+          <div className="chips" style={{ flexWrap: 'wrap', marginTop: 14 }}>
+            {chips.map((c) => <button className="chip" key={c.q} onClick={() => submit(c.q)}>{c.label}</button>)}
+          </div>
+        )}
         {loading && query.trim() && <div className="empty">{tr(lang, 'loading')}</div>}
-        {!loading && query.trim() && items.length === 0 && <div className="empty">{tr(lang, 'noResults')}</div>}
+        {!loading && query.trim() && error && (
+          typeof navigator !== 'undefined' && !navigator.onLine
+            ? <EmptyState lang={lang} icon="globeOff" titleKey="searchError" hintKey="offlineHint" action={{ labelKey: 'retry', onClick: () => setRetry((r) => r + 1) }} />
+            : <EmptyState lang={lang} icon="globe" titleKey="searchError" action={{ labelKey: 'retry', onClick: () => setRetry((r) => r + 1) }} />
+        )}
+        {!loading && query.trim() && !error && items.length === 0 && <div className="empty">{tr(lang, 'noResults')}</div>}
 
-        {(filter === 'music_songs' || filter === 'music_videos') && tracks.map((track, index) => (
-          <TrackRow key={track.id + index} track={track} index={index} queue={tracks}
-            onPlay={onPlay} liked={state.likes.some((x) => x.id === track.id)}
-            onLike={(t) => { void import('../audio/engine').then(({ engine }) => engine.toggleLike(t)) }}
-            isCurrent={state.current?.id === track.id} durationLabel={(s) => engineTime(s)} />
-        ))}
+        {query.trim() && (filter === 'music_songs' || filter === 'music_videos') && (
+          <TrackList tracks={tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} menu={!!onMenu} onMenu={onMenu} emptyKey="noResults" />
+        )}
 
-        {filter === 'music_artists' && items.map((item, index) => {
+        {query.trim() && filter === 'music_artists' && items.map((item, index) => {
           const id = (item.url || '').split('/channel/')[1] || ''
           return (
             <button className="track" key={id + index} onClick={() => id && navigate('#/artist/' + id)}>
-              <img className="track-art" src={item.thumbnail || ''} alt="" loading="lazy" />
+              <img className="track-art" src={item.thumbnail || ''} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
               <div className="track-txt">
                 <div className="track-title">{item.name || item.title}</div>
                 <div className="track-sub">{tr(lang, 'artists')}</div>
@@ -137,14 +164,14 @@ export function SearchView({ lang, state, query, onPlay }: Props) {
           )
         })}
 
-        {filter === 'music_albums' && (
+        {query.trim() && filter === 'music_albums' && (
           <div className="pl-grid" style={{ marginTop: 8 }}>
             {items.map((item, index) => {
               const url = item.url || ''
               const id = url.split('list=')[1]?.split('&')[0] || videoIdOf(url)
               return (
                 <button className="pl-card" key={String(item.url) + index} onClick={() => id && navigate('#/playlist/' + id)}>
-                  <img src={item.thumbnail || ''} alt="" loading="lazy" />
+                  <img src={item.thumbnail || ''} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                   <span className="pl-card-shade" />
                   <span className="pl-card-txt">
                     <span className="pl-card-name">{item.name || item.title}</span>

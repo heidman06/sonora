@@ -1,5 +1,5 @@
 import type {
-  Account, AuthResponse, HistoryItem, MixSummary, PipedItem, PlaylistDetail, PlaylistSummary,
+  Account, AuthResponse, HistoryItem, Lang, MixesResponse, MixSummary, MoodsResponse, PipedItem, PlaylistDetail, PlaylistSummary,
   SearchResponse, Track,
 } from './types'
 
@@ -80,13 +80,34 @@ export class Api {
     return this.json(MUS + '/playlists/' + id, { method: 'DELETE' })
   }
 
-  private async ytPlaylist(id: string): Promise<PlaylistDetail> {
-    const d = await this.json<{ name: string; tracks: Array<{ videoId: string; title: string; artist: string; duration: number; thumb?: string }> }>(MUS + '/ytplaylist?list=' + encodeURIComponent(id))
+  async ytPlaylist(id: string): Promise<PlaylistDetail & { truncated: boolean }> {
+    const d = await this.json<{ name: string; truncated?: boolean; tracks: Array<{ videoId: string; title: string; artist: string; duration: number; thumb?: string }> }>(MUS + '/ytplaylist?list=' + encodeURIComponent(id))
     return {
       id: 0,
       name: d.name || '',
-      tracks: d.tracks.map((t) => ({ id: t.videoId, title: t.title || '', artist: t.artist || '', thumb: t.thumb || thumbOf(t.videoId), duration: t.duration || 0 })),
+      truncated: !!d.truncated,
+      tracks: d.tracks.map((t) => ({ id: t.videoId, title: t.title || '', artist: cleanArtist(t.artist), thumb: t.thumb || thumbOf(t.videoId), duration: t.duration || 0 })),
     }
+  }
+
+  bulkAddToPlaylist(id: number | string, tracks: Track[]): Promise<{ added: number }> {
+    return this.json(MUS + '/playlists/' + id + '/tracks/bulk', this.body({ tracks: tracks.map((t) => ({ videoId: t.id, title: t.title, artist: t.artist, duration: t.duration || 0 })) }))
+  }
+
+  reorderPlaylist(id: number | string, videoIds: string[]): Promise<void> {
+    return this.json(MUS + '/playlists/' + id + '/reorder', this.body({ videoIds })).then(() => undefined)
+  }
+
+  stats(months = 6): Promise<{ totals: { plays: number; minutes: number; tracks: number }; topTracks: Array<Record<string, unknown>>; topArtists: Array<{ artist: string; plays: number; minutes: number }>; perMonth: Array<{ month: string; plays: number; minutes: number }> }> {
+    return this.json(MUS + '/stats?months=' + months)
+  }
+
+  smart(key: 'top' | 'recent' | 'never'): Promise<Track[]> {
+    return this.json<{ tracks: Array<Record<string, unknown>> }>(MUS + '/smart/' + key).then((d) => (d.tracks || []).map(normalizeTrack))
+  }
+
+  radio(seed: string, n = 30): Promise<Track[]> {
+    return this.json<Array<Record<string, unknown>>>(MUS + '/radio?seed=' + encodeURIComponent(seed) + '&n=' + n).then((l) => l.map(normalizeTrack))
   }
 
   async playlist(id: number | string): Promise<PlaylistDetail> {
@@ -128,7 +149,7 @@ export class Api {
 
   likes(): Promise<Track[]> {
     return this.json<Array<{ videoId: string; title: string; artist: string; duration: number }>>(MUS + '/likes')
-      .then((list) => list.map((x) => ({ id: x.videoId, title: x.title || '', artist: x.artist || '', thumb: thumbOf(x.videoId), duration: x.duration || 0 })))
+      .then((list) => list.map((x) => ({ id: x.videoId, title: x.title || '', artist: cleanArtist(x.artist), thumb: thumbOf(x.videoId), duration: x.duration || 0 })))
   }
 
   like(track: Track): Promise<void> {
@@ -149,7 +170,7 @@ export class Api {
     fetch(MUS + '/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.token },
-      body: JSON.stringify({ videoId: track.id, title: track.title, artist: track.artist }),
+      body: JSON.stringify({ videoId: track.id, title: track.title, artist: track.artist, duration: track.duration || 0 }),
     }).catch(() => {})
   }
 
@@ -161,20 +182,32 @@ export class Api {
     return this.json<Array<Record<string, unknown>>>(MUS + '/mix?n=' + n).then((list) => list.map(normalizeTrack))
   }
 
-  mixes(): Promise<MixSummary[]> {
-    return this.json<Array<Record<string, unknown>>>(MUS + '/mixes').then((list) => list.map((m) => ({
-      key: String(m.key ?? ''),
-      name: String(m.name ?? ''),
-      count: Number(m.count ?? 0),
-      cover: Array.isArray(m.cover) ? m.cover.map(String) : [],
-      tracks: Array.isArray(m.tracks) ? (m.tracks as Array<Record<string, unknown>>).map(normalizeTrack) : [],
-    })))
+  moods(lang: Lang): Promise<MoodsResponse> {
+    return this.json<MoodsResponse>(MUS + '/moods?lang=' + lang)
   }
 
-  feedback(videoId: string, action: 'dismiss' | 'like' = 'dismiss'): Promise<void> {
-    return this.json(MUS + '/feedback', this.body({ videoId, action })).then(() => undefined)
+  mixes2(): Promise<MixesResponse> {
+    return this.json<Record<string, unknown>>(MUS + '/mixes2').then((r) => ({
+      v: Number(r.v ?? 1),
+      cold: !!r.cold,
+      seed: String(r.seed ?? ''),
+      mixes: Array.isArray(r.mixes) ? (r.mixes as Array<Record<string, unknown>>).map((m) => ({
+        key: String(m.key ?? ''),
+        labelKey: String(m.labelKey ?? ''),
+        ...(m.moodId ? { moodId: String(m.moodId) } : {}),
+        ...(m.n !== undefined ? { n: Number(m.n) } : {}),
+        ...(m.subtitleKey ? { subtitleKey: String(m.subtitleKey) } : {}),
+        seeds: Array.isArray(m.seeds) ? (m.seeds as Array<Record<string, unknown>>).map((s) => ({ t: s.t === 'key' ? 'key' as const : 'artist' as const, v: String(s.v ?? '') })) : [],
+        count: Number(m.count ?? 0),
+        cover: Array.isArray(m.cover) ? m.cover.map(String) : [],
+        tracks: Array.isArray(m.tracks) ? (m.tracks as Array<Record<string, unknown>>).map(normalizeTrack) : [],
+      })) as MixSummary[] : [],
+    }))
   }
 
+  feedback(videoId: string, action: 'dismiss' | 'like'): Promise<{ ok: boolean }> {
+    return this.json(MUS + '/feedback', this.body({ videoId, action }))
+  }
   search(q: string, filter = 'music_songs', nextpage = ''): Promise<SearchResponse> {
     let url = PIPED + '/search?q=' + encodeURIComponent(q) + '&filter=' + encodeURIComponent(filter)
     if (nextpage) url += '&nextpage=' + encodeURIComponent(nextpage)
@@ -190,8 +223,13 @@ export class Api {
   }
 }
 
+export function cleanArtist(a: string | null | undefined): string {
+  const s = String(a || '').trim()
+  return s === 'NA' || s === 'N/A' ? '' : s
+}
+
 export function thumbOf(id: string | null | undefined): string {
-  return id ? 'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg' : ''
+  return id ? '/api/img/vi/' + id + '/mqdefault.jpg' : ''
 }
 
 export function pipedTrack(item: PipedItem): Track {

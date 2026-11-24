@@ -1,0 +1,9 @@
+[Unit]
+Description=Sonora — alertes ntfy (cookies, smoke, cache)
+After=network-online.target sonora.service
+
+[Service]
+Type=oneshot
+User=sonora
+Environment=SONORA_DATA=/opt/sonora/data
+ExecStart=/usr/bin/node /opt/sonora/alertes.mjs
