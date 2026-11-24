@@ -371,6 +371,7 @@ export class PlayerEngine {
         }
       }).catch(() => {})
       this.patch({ current: queue[index] || queue[0], queue, duration: durs[index] || 0, currentTime: 0, hls: true, loadingTrack: '' })
+      this.updatePositionState()
       await this.playMedia()
       this.prefetchNext()
       return true
@@ -401,6 +402,7 @@ export class PlayerEngine {
     if (this.hls.active) {
       this.media.currentTime = this.hls.offsets[next] || 0
       this.patch({ current: queue[next], currentTime: 0 })
+      this.updatePositionState()
       return
     }
     void this.playTrack(queue[next], queue, next)
@@ -414,6 +416,7 @@ export class PlayerEngine {
       const target = rel > 4 ? idx : (idx <= 0 ? queue.length - 1 : idx - 1)
       this.media.currentTime = this.hls.offsets[target] || 0
       this.patch({ current: queue[target], currentTime: 0 })
+      this.updatePositionState()
       return
     }
     if (this.media.currentTime > 4) { this.media.currentTime = 0; return }
@@ -438,6 +441,7 @@ export class PlayerEngine {
       const off = this.hls.offsets[idx] || 0
       const dur = this.hls.durs[idx] || 1
       try { this.media.currentTime = off + Math.min(dur - 0.35, r * dur) } catch { /* noop */ }
+      this.updatePositionState()
       return
     }
     if (Number.isFinite(this.media.duration) && this.media.duration > 0) this.media.currentTime = r * this.media.duration
@@ -545,18 +549,21 @@ export class PlayerEngine {
           this.api.pushHistory(current)
           this.patch({ current, currentTime: rel, duration: dur, hls: true })
           this.updateMediaSession()
+          this.updatePositionState()
           if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } }
           return
         }
         this.patch({ current, currentTime: rel, duration: dur, hls: true })
+        this.updatePositionState()
         if (this.watchdogTries > 0) this.watchdogTries = 0
         return
       }
       const duration = Number.isFinite(this.media.duration) ? this.media.duration : (this.state.current?.duration || 0)
       this.patch({ currentTime: this.media.currentTime, duration })
+      this.updatePositionState()
     })
-    this.media.addEventListener('play', () => { this.patch({ playing: true }); this.prefetchNext(); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } } })
-    this.media.addEventListener('pause', () => { this.patch({ playing: false }); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'paused' } catch { /* noop */ } } })
+    this.media.addEventListener('play', () => { this.patch({ playing: true }); this.prefetchNext(); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } } this.updatePositionState() })
+    this.media.addEventListener('pause', () => { this.patch({ playing: false }); if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'paused' } catch { /* noop */ } } this.updatePositionState() })
     this.media.addEventListener('playing', () => { this.patch({ playing: true, loadingTrack: '' }); this.clearStall() })
     this.media.addEventListener('waiting', () => this.armStall())
     this.media.addEventListener('stalled', () => this.armStall())
@@ -644,6 +651,30 @@ export class PlayerEngine {
       this.media.src = wav
       void this.media.play().then(() => { this.media.pause(); this.media.removeAttribute('src'); this.media.load() }).catch(() => {})
     } catch { /* noop */ }
+  }
+
+  private updatePositionState(): void {
+    if (!('mediaSession' in navigator)) return
+    const session = navigator.mediaSession as MediaSession & { setPositionState?: (state: { duration: number; position: number; playbackRate?: number }) => void }
+    if (typeof session.setPositionState !== 'function') return
+    let duration: number
+    let position: number
+    if (this.hls.active) {
+      const idx = Math.max(0, this.hls.queue.findIndex((t) => t.id === this.state.current?.id))
+      duration = this.hls.durs[idx] || 0
+      position = this.state.currentTime
+    } else {
+      duration = Number.isFinite(this.media.duration) ? this.media.duration : (this.state.duration || 0)
+      position = this.media.currentTime || 0
+    }
+    if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(position)) return
+    try {
+      session.setPositionState({
+        duration,
+        position: Math.max(0, Math.min(position, duration)),
+        playbackRate: this.media.playbackRate || 1,
+      })
+    } catch { /* Safari can reject transient states */ }
   }
 
   private updateMediaSession(): void {

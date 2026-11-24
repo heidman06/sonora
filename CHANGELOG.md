@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.0.3 - 2026-11-24
+- Lock screen / Now Playing progress now uses the current track duration via MediaSession setPositionState
+- Fixes negative/queue-length remaining time on iOS lock screen for HLS queues
+
 ## v2.0.2 - 2026-11-24
 - Desktop layout: sidebar navigation, wide content and a dedicated player bar
 - Desktop player is now a two-column dialog; mobile keeps the full-screen sheet

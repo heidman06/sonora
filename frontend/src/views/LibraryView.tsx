@@ -121,7 +121,7 @@ export function LibraryView({ lang, state, onPlay, onLike, onDeletePlaylist }: P
         </div>
       )}
 
-      <div className="setting-row"><b>{tr(lang, 'version')}</b><span style={{ opacity: 0.65, fontSize: 13 }}>2.0.2 · React</span></div>
+      <div className="setting-row"><b>{tr(lang, 'version')}</b><span style={{ opacity: 0.65, fontSize: 13 }}>2.0.3 · React</span></div>
       {languageRow}
 
       <section className="lib-sec">
