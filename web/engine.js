@@ -277,6 +277,35 @@ function loadPlaylists() {
 
 /* ---------- lecteur ---------- */
 var mediaVideo = null, mediaAudio = null;
+var prechargeTimer = null;
+function prechargerSuivant() {
+  try {
+    if (!S.queue || S.qi < 0) return;
+    for (var k = 1; k <= 2; k++) {
+      var nx = S.queue[S.qi + k];
+      if (!nx || !nx.id) continue;
+      fetch(location.origin + '/musique/dl/' + encodeURIComponent(nx.id), { method: 'HEAD' }).catch(function () {});
+    }
+  } catch (e) {}
+}
+function avancerAuto() {
+  if (!S.queue.length) return;
+  var n = S.qi + 1;
+  if (S.repeat === 'all' && n >= S.queue.length) n = 0;
+  if (n >= S.queue.length) { S.playing = false; paintPlayState(); return; }
+  var next = S.queue[n];
+  if (!next || !next.id) return;
+  S.qi = n; cur = next; intentPlay = true;
+  mediaVideo._fallbackTried = false; mediaAudio._fallbackTried = false;
+  mediaVideo._recoverTries = 0; mediaAudio._recoverTries = 0;
+  setBlob('');
+  useMedia(mediaAudio);
+  media.src = location.origin + '/musique/dl/' + encodeURIComponent(next.id);
+  cur.duration = next.duration || 0;
+  media.play().catch(function () {});
+  paintNow(); paintPlayState(); setMediaSession(); pushRecent(next); persistQueue();
+  prechargerSuivant();
+}
 var stallTimer = null;
 var skipTimer = null;
 function clearStall() { if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; } }
@@ -330,7 +359,7 @@ function bindMedia(el) {
     $('#t-cur').textContent = fmt(el.currentTime);
     $('#t-dur').textContent = fmt(d);
   });
-  el.addEventListener('play', function () { if (media === el) { S.playing = true; el._recoverTries = 0; S._skipCount = 0; paintPlayState(); } });
+  el.addEventListener('play', function () { if (media === el) { S.playing = true; el._recoverTries = 0; S._skipCount = 0; paintPlayState(); if (prechargeTimer) clearTimeout(prechargeTimer); prechargeTimer = setTimeout(function () { if (intentPlay) prechargerSuivant(); }, 1500); } });
   el.addEventListener('playing', function () { if (media === el) { clearStall(); el._recoverTries = 0; paintPlayState(); } });
   el.addEventListener('pause', function () { if (media === el) { S.playing = false; clearStall(); paintPlayState(); } });
   el.addEventListener('waiting', function () { if (media === el && intentPlay) armerWatchdog(el); });
@@ -338,7 +367,7 @@ function bindMedia(el) {
   el.addEventListener('ended', function () {
     if (media !== el) return;
     if (S.repeat === 'one') { el.currentTime = 0; el.play(); return; }
-    playNext(true);
+    avancerAuto();
   });
   el.addEventListener('error', function () {
     if (media !== el) return;

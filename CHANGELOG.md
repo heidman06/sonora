@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.17.2 - 2026-11-24
+- Background playback: tracks now advance synchronously on ended (no async IndexedDB wait)
+- Prefetch of the next two tracks for faster transitions and iOS background
+
 ## v1.17.1 - 2026-11-24
 - Playback resilience: stall watchdog, automatic recovery and skip of unavailable tracks
 - Anonymized screenshots (demo account, no personal playlist names)
