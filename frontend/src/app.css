@@ -469,7 +469,10 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; }
 .theme-ico .i-moon { opacity: 0; transform: rotate(90deg) scale(.6); }
 .theme-ico.light .i-sun { opacity: 0; transform: rotate(-90deg) scale(.6); }
 .theme-ico.light .i-moon { opacity: 1; transform: none; }
-.foot-actions { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; }
+.foot-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 12px 0; margin-top: 14px; }
+.foot-cell { width: 25%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.foot-label { font-size: 10px; font-weight: 650; letter-spacing: .02em; color: var(--txt-3); }
+@media (min-width: 700px) { .foot-actions { flex-wrap: nowrap; gap: 14px; } .foot-cell { width: auto; } .foot-label { display: none; } }
 .foot-btn { position: relative; width: 44px; height: 44px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; color: var(--txt-2); transition: transform .2s var(--ease), color .2s; }
 .foot-btn:active { transform: scale(.92); }
 .foot-btn.on { color: var(--accent); border-color: rgba(250,45,85,.4); }

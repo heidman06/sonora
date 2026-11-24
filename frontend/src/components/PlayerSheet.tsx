@@ -112,18 +112,39 @@ export function PlayerSheet(props: Props) {
           </div>
         )}
         <div className="foot-actions">
-          <button className={'foot-btn' + (liked ? ' on' : '')} aria-label={tr(lang, 'favorites')} onClick={props.onLike}>
-            <Icon name={liked ? 'heartFill' : 'heart'} size={19} />
-            <LikeBurst active={liked} />
-          </button>
-          <button className="foot-btn" aria-label={tr(lang, 'addToPlaylist')} onClick={props.onAdd}><Icon name="plus" size={19} /></button>
-          <button className={'foot-btn' + (showLyrics ? ' on' : '')} aria-label={tr(lang, 'lyrics')} onClick={() => setShowLyrics((v) => !v)}><Icon name="note" size={19} /></button>
-          <button className={'foot-btn' + (state.sleep.mode !== 'off' ? ' on' : '')} aria-label={tr(lang, 'sleepTimer')} onClick={() => setShowSleep((v) => !v)}><Icon name="moon" size={19} /></button>
-          <button className={'foot-btn' + (showRate ? ' on' : '')} aria-label={tr(lang, 'rate')} onClick={() => setShowRate((v) => !v)}><Icon name="gauge" size={19} /></button>
-          <button className="foot-btn" aria-label={tr(lang, 'startRadio')} onClick={() => current && void engine.startRadio(current.id)}><Icon name="listen" size={19} /></button>
-          <button className="foot-btn" aria-label={tr(lang, 'download')} onClick={props.onDownload} disabled={downloading || downloaded}>
-            {downloading ? <span className="dl-pct">{state.downloadProgress[current.id] ?? 0}%</span> : <Icon name={downloaded ? 'check' : 'download'} size={19} />}
-          </button>
+          <div className="foot-cell">
+            <button className={'foot-btn' + (liked ? ' on' : '')} aria-label={tr(lang, 'favorites')} onClick={props.onLike}>
+              <Icon name={liked ? 'heartFill' : 'heart'} size={19} />
+              <LikeBurst active={liked} />
+            </button>
+            <span className="foot-label">{tr(lang, 'footLike')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className="foot-btn" aria-label={tr(lang, 'addToPlaylist')} onClick={props.onAdd}><Icon name="plus" size={19} /></button>
+            <span className="foot-label">{tr(lang, 'footAdd')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className={'foot-btn' + (showLyrics ? ' on' : '')} aria-label={tr(lang, 'lyrics')} onClick={() => setShowLyrics((v) => !v)}><Icon name="note" size={19} /></button>
+            <span className="foot-label">{tr(lang, 'footLyrics')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className={'foot-btn' + (state.sleep.mode !== 'off' ? ' on' : '')} aria-label={tr(lang, 'sleepTimer')} onClick={() => setShowSleep((v) => !v)}><Icon name="moon" size={19} /></button>
+            <span className="foot-label">{tr(lang, 'footSleep')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className={'foot-btn' + (showRate ? ' on' : '')} aria-label={tr(lang, 'rate')} onClick={() => setShowRate((v) => !v)}><Icon name="gauge" size={19} /></button>
+            <span className="foot-label">{tr(lang, 'footSpeed')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className="foot-btn" aria-label={tr(lang, 'startRadio')} onClick={() => current && void engine.startRadio(current.id)}><Icon name="radio" size={19} /></button>
+            <span className="foot-label">{tr(lang, 'footRadio')}</span>
+          </div>
+          <div className="foot-cell">
+            <button className="foot-btn" aria-label={tr(lang, 'download')} onClick={props.onDownload} disabled={downloading || downloaded}>
+              {downloading ? <span className="dl-pct">{state.downloadProgress[current.id] ?? 0}%</span> : <Icon name={downloaded ? 'check' : 'download'} size={19} />}
+            </button>
+            <span className="foot-label">{tr(lang, 'footSave')}</span>
+          </div>
         </div>
         {showLyrics && <div className="player-panels"><LyricsPanel track={current} lang={lang} currentTime={currentTime} onSeek={(s) => engine.seekTo(s)} /></div>}
         {showSleep && <div className="player-panels"><SleepPicker lang={lang} mode={state.sleep.mode} endsAt={state.sleep.endsAt} onPick={(m) => engine.setSleep(m)} /></div>}

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.4.5 - 2026-11-25
+- Lecteur mobile : la rangée de 7 actions ne déborde plus — grille 4+3 cellules avec libellés courts (Aimer/Ajouter/Paroles/Sommeil/Vitesse/Radio/Offline) ×3 ; sur ≥700 px une seule rangée d'icônes sans libellés ; icône ondes dédiée pour la radio (plus de confusion avec l'onglet Écouter)
+
 ## v2.4.4 - 2026-11-24
 - Téléchargements résilients : manifeste local (localStorage) en plus d'IndexedDB ; si le stockage IDB est vidé/indisponible (pression mémoire iOS, upgrade bloqué), la liste est restaurée depuis le manifeste avec un badge « copie hors ligne perdue » et la lecture re-télécharge automatiquement la copie ; retry IDB (2 tentatives) ; la liste en mémoire n'est plus jamais vidée par une erreur transitoire ; une copie blob vide n'est plus utilisée comme source (stream + re-sauvegarde)
 
