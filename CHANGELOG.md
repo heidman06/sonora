@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.4 - 2026-11-25
+- Recherche desktop : scope « Podcasts » intégré au segmented (5e onglet) avec résultats inline (top pays par défaut, recherche par pays) ; chip orpheline masquée sur desktop ; segmented compact inline ; empty-state resserré ; mobile inchangé (chip conservée, 3 onglets)
+
 ## v2.8.3 - 2026-11-25
 - Nouveaux épisodes : pochettes du show affichées (l'API /api/pod/new renvoie show_image ; avant, cases grises vides)
 

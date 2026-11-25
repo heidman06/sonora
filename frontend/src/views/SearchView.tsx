@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { engine } from '../audio/engine'
 import type { UiState } from '../audio/usePlayer'
-import type { Lang, PipedItem, Track } from '../lib/types'
+import type { Lang, PipedItem, Track, PodDiscovery } from '../lib/types'
 import { pipedTrack, videoIdOf } from '../lib/api'
 import { tr } from '../lib/i18n'
 import { navigate } from '../lib/hooks'
@@ -36,6 +36,9 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   const [retry, setRetry] = useState(0)
+  const [scope, setScope] = useState<'music' | 'pod'>('music')
+  const [podResults, setPodResults] = useState<PodDiscovery[]>([])
+  const [podLoading, setPodLoading] = useState(false)
   const api = engine.api
   const [perso, setPerso] = useState<MoodsResponse | null>(() => (state.token ? lireMoodsCache(state.user, lang) : null))
   useEffect(() => {
@@ -59,8 +62,16 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   useEffect(() => {
     setSuggestions([])
     suggestOpen.current = false
-    if (!query.trim() || !state.token) { setItems([]); setTracks([]); setLoading(false); return }
+    if (!state.token) { setItems([]); setTracks([]); setLoading(false); setPodResults([]); return }
     let alive = true
+    if (scope === 'pod') {
+      setItems([]); setTracks([]); setError(false)
+      setPodLoading(true)
+      const req = query.trim() ? api.podSearch(query.trim(), lang) : api.podCurated(lang)
+      req.then((r) => { if (alive) { setPodResults(r.results); setPodLoading(false) } }).catch(() => { if (alive) { setPodResults([]); setPodLoading(false) } })
+      return () => { alive = false }
+    }
+    if (!query.trim()) { setItems([]); setTracks([]); setLoading(false); return }
     setLoading(true)
     setError(false)
     api?.search(query, filter).then((data) => {
@@ -73,7 +84,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
       setLoading(false)
     }).catch(() => { if (alive) { setLoading(false); setItems([]); setTracks([]); setError(true) } })
     return () => { alive = false }
-  }, [query, filter, api, retry])
+  }, [query, filter, api, retry, scope, lang])
 
   const submit = (value: string) => {
     const q = value.trim()
@@ -88,6 +99,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
 
   const onInput = (value: string) => {
     setText(value)
+    if (scope === 'pod') { setSuggestions([]); suggestOpen.current = false; return }
     if (timer.current) window.clearTimeout(timer.current)
     if (!value.trim()) { suggestOpen.current = false; setSuggestions([]); return }
     suggestOpen.current = true
@@ -145,27 +157,42 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
         {FILTERS.map((f) => (
           <button key={f.key} className={filter === f.key ? 'on' : ''} onClick={() => setFilter(f.key)}>{tr(lang, f.label)}</button>
         ))}
+        <button className={'pod-scope' + (scope === 'pod' ? ' on' : '')} onClick={() => setScope(scope === 'pod' ? 'music' : 'pod')}><Icon name="note" size={14} /> {tr(lang, 'podcasts')}</button>
       </div>
       <div id="results" className="list">
-        {!query.trim() && <EmptyState lang={lang} icon="search" titleKey="searchTitle" hintKey="searchHint" />}
-        {!query.trim() && chips.length > 0 && (
+        {scope === 'music' && !query.trim() && <EmptyState lang={lang} icon="search" titleKey="searchTitle" hintKey="searchHint" />}
+        {scope === 'music' && !query.trim() && chips.length > 0 && (
           <div className="chips" style={{ flexWrap: 'wrap', marginTop: 14 }}>
             {chips.map((c) => <button className="chip" key={c.q} onClick={() => submit(c.q)}>{c.label}</button>)}
           </div>
         )}
-        {loading && query.trim() && <div className="empty">{tr(lang, 'loading')}</div>}
-        {!loading && query.trim() && error && (
+        {scope === 'music' && loading && query.trim() && <div className="empty">{tr(lang, 'loading')}</div>}
+        {scope === 'music' && !loading && query.trim() && error && (
           typeof navigator !== 'undefined' && !navigator.onLine
             ? <EmptyState lang={lang} icon="globeOff" titleKey="searchError" hintKey="offlineHint" action={{ labelKey: 'retry', onClick: () => setRetry((r) => r + 1) }} />
             : <EmptyState lang={lang} icon="globe" titleKey="searchError" action={{ labelKey: 'retry', onClick: () => setRetry((r) => r + 1) }} />
         )}
-        {!loading && query.trim() && !error && items.length === 0 && <div className="empty">{tr(lang, 'noResults')}</div>}
+        {scope === 'music' && !loading && query.trim() && !error && items.length === 0 && <div className="empty">{tr(lang, 'noResults')}</div>}
+        {scope === 'pod' && (
+          podLoading ? <div className="empty">{tr(lang, 'loading')}</div>
+          : podResults.length ? (
+            <div className="pod-list" style={{ marginTop: 8 }}>
+              {podResults.map((d) => (
+                <button className="pod-row" key={d.feedUrl} type="button" onClick={() => { void api.podAddShow(d.feedUrl).then((r) => navigate('#/podshow/' + r.show.id)).catch(() => {}) }}>
+                  {d.logo ? <img className="pod-row-art" src={d.logo} alt="" loading="lazy" /> : <span className="pod-row-art pod-row-fallback"><Icon name="note" size={18} /></span>}
+                  <span className="pod-row-txt"><b>{d.title}</b><span>{d.author}</span></span>
+                  <Icon name="plus" size={16} />
+                </button>
+              ))}
+            </div>
+          ) : <div className="empty">{tr(lang, 'podNoResults')}</div>
+        )}
 
-        {query.trim() && (filter === 'music_songs' || filter === 'music_videos') && (
+        {scope === 'music' && query.trim() && (filter === 'music_songs' || filter === 'music_videos') && (
           <TrackList tracks={tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} menu={!!onMenu} onMenu={onMenu} emptyKey="noResults" />
         )}
 
-        {query.trim() && filter === 'music_artists' && items.map((item, index) => {
+        {scope === 'music' && query.trim() && filter === 'music_artists' && items.map((item, index) => {
           const id = (item.url || '').split('/channel/')[1] || ''
           return (
             <button className="track" key={id + index} onClick={() => id && navigate('#/artist/' + id)}>
@@ -178,7 +205,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
           )
         })}
 
-        {query.trim() && filter === 'music_albums' && (
+        {scope === 'music' && query.trim() && filter === 'music_albums' && (
           <div className="pl-grid" style={{ marginTop: 8 }}>
             {items.map((item, index) => {
               const url = item.url || ''

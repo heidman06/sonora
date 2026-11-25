@@ -524,3 +524,12 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   *:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--txt-2) 55%, transparent); border: 2px solid transparent; background-clip: content-box; }
   *::-webkit-scrollbar-corner { background: transparent; }
 }
+/* ===== Search desktop: scope Podcasts intégré, segmented compact, entry chip masquée ===== */
+.pod-scope { display: none; }
+@media (min-width: 1000px) {
+  .pod-search-entry { display: none; }
+  .pod-scope { display: inline-flex; align-items: center; gap: 6px; }
+  #filters { display: inline-flex; width: auto; max-width: 100%; }
+  #filters button { flex: none; padding: 9px 18px; }
+  #results .empty-illu, #results .empty { padding: 28px 16px; }
+}
