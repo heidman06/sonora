@@ -54,7 +54,7 @@ export function MixesView({ lang, state, id, onPlay, onMenu }: Props) {
       <div className="pl-grid">
         {mixes.map((m) => (
           <button className="pl-card mix-grid-card" key={m.key} onClick={() => navigate('#/mixes/' + m.key)}>
-            <MixArt cover={m.cover} />
+            <MixArt cover={m.cover} moodId={m.moodId} />
             <span className="pl-card-txt">
               <span className="pl-card-name">{mixLabel(lang, m)}</span>
               <span className="pl-card-count">{m.count} {tr(lang, 'tracks')}</span>

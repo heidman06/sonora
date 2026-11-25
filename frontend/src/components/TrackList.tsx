@@ -76,7 +76,8 @@ export function TrackList({ tracks, lang, likedIds, currentId, memoryKey, batchS
     let track = list[i]
     if (track.id !== row.dataset.id) { const j = list.findIndex((t) => t.id === row.dataset.id); if (j < 0) return; track = list[j] }
     const action = act.dataset.action
-    if (action === 'play') void engine.playTrack(track, list, i)
+    if (action === 'toggle') void engine.togglePlay()
+    else if (action === 'play') void engine.playTrack(track, list, i)
     else if (action === 'like') void engine.toggleLike(track)
     else if (action === 'remove') removeRef.current?.(track, i)
     else if (action === 'menu') menuRef.current?.(track)

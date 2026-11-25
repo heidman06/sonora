@@ -20,6 +20,9 @@ export const TrackRow = memo(function TrackRow({ track, index, lang, liked, isCu
   return (
     <div className={'track' + (isCurrent ? ' is-current playing' : '')} role="button" tabIndex={0} data-action="play" data-id={track.id} data-index={index}>
       <Art id={track.id} className="track-art" />
+      <button className="tplay" type="button" data-action={isCurrent ? 'toggle' : 'play'} data-id={track.id} data-index={index} aria-label={tr(lang, isCurrent ? 'pause' : 'play')}>
+        <Icon name={isCurrent ? 'pause' : 'play'} size={14} />
+      </button>
       {isCurrent && <span className="eq" aria-hidden="true"><i /><i /><i /></span>}
       <div className="track-txt">
         <div className="track-title">{track.title}</div>

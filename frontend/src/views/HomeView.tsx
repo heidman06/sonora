@@ -173,7 +173,7 @@ export function HomeView({ lang, state, onPlay }: Props) {
               return (
                 <button className="card mix-card" key={mix.key} onClick={() => playMix(mix)}>
                   <div className="card-art-wrap">
-                    <MixArt cover={mix.cover} />
+                    <MixArt cover={mix.cover} moodId={mix.moodId} />
                     <span className="card-play"><Icon name="play" size={15} /></span>
                   </div>
                   <div className="card-title">{mixLabel(lang, mix)}</div>

@@ -113,8 +113,15 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
         <button className="btn-ghost" onClick={() => download(playlist.name + '.json', 'application/json', toJSON(playlist))}>{tr(lang, 'exportJSON')}</button>
         {numeric && <button className="pl-danger" onClick={() => setConfirmDel(true)}>{tr(lang, 'delete')}</button>}
       </div>
-      <TrackList tracks={playlist.tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} memoryKey={'playlist.' + id}
-        removable={numeric} menu={!!onMenu} onMenu={onMenu} onRemove={removeTrack} emptyKey="noPlaylists" />
+      {playlist.tracks.length === 0 ? (
+        <div className="empty pl-empty">
+          <p>{tr(lang, 'playlistEmptyHint')}</p>
+          <button className="btn-primary" onClick={() => navigate('#/search')}><Icon name="plus" size={16} /> {tr(lang, 'addTracks')}</button>
+        </div>
+      ) : (
+        <TrackList tracks={playlist.tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} memoryKey={'playlist.' + id}
+          removable={numeric} menu={!!onMenu} onMenu={onMenu} onRemove={removeTrack} />
+      )}
       {undo && <UndoToast message={tr(lang, 'removed') + ' : ' + undo.track.title} actionLabel={tr(lang, 'undo')} onAction={() => void undoRemove()} onDone={() => setUndo(null)} />}
       {confirmDel && (
         <ConfirmDialog title={tr(lang, 'delete') + ' « ' + playlist.name + ' » ?'} confirmLabel={tr(lang, 'delete')} cancelLabel={tr(lang, 'cancel')}

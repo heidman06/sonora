@@ -194,6 +194,7 @@ export class PlayerEngine {
   getSnapshot = (): PlayerState => this.state
 
   private patch(patch: Partial<PlayerState>): void {
+    try { document.documentElement.dataset.playing = (patch.playing ?? this.state.playing) ? '1' : '0' } catch (e) { /* noop */ }
     this.state = { ...this.state, ...patch }
     for (const listener of this.listeners) listener()
   }

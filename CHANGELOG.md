@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.5.6 - 2026-11-25
+- Recherche : doublons supprimés (dedupe par videoId, y compris au chargement suivant)
+- Égaliseur : l'animation se fige réellement en pause (attribut data-playing + animation-play-state)
+- Ligne de titre : bouton play/pause dédié (40x40 mobile), play si titre non courant, pause sinon
+- Mixes froids : pochettes en mosaïque dégradée par mood (fin des tuiles grises)
+- Playlist vide : message + bouton « Ajouter des titres » vers la recherche
+
 ## v2.5.3 - 2026-11-25
 - Inscription : champ « Code d'invitation » dans le formulaire (mode création de compte) + message explicite en cas de code requis/invalide ; api.register/engine.register transmettent le code
 

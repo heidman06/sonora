@@ -65,9 +65,11 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
     setError(false)
     api?.search(query, filter).then((data) => {
       if (!alive) return
-      setItems(data.items || [])
+      const uniq = <T,>(list: T[]) => { const seen = new Set<string>(); return list.filter((x) => { const o = x as { videoId?: string; id?: string; url?: string }; const k = String(o.videoId || o.id || o.url || ''); if (!k || seen.has(k)) return false; seen.add(k); return true }) }
+      const items = uniq(data.items || [])
+      setItems(items)
       setNextpage(data.nextpage || '')
-      setTracks((data.items || []).filter((x) => x.type === 'stream').map(pipedTrack).filter((t) => t.id))
+      setTracks(uniq(items.filter((x) => x.type === 'stream').map(pipedTrack).filter((t) => t.id)))
       setLoading(false)
     }).catch(() => { if (alive) { setLoading(false); setItems([]); setTracks([]); setError(true) } })
     return () => { alive = false }
@@ -104,7 +106,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
     if (!nextpage || !api) return
     api.search(query, filter, nextpage).then((data) => {
       const more = (data.items || []).filter((x) => x.type === 'stream').map(pipedTrack).filter((t) => t.id)
-      setTracks((prev) => [...prev, ...more])
+      setTracks((prev) => { const seen = new Set(prev.map((t) => t.id)); return [...prev, ...more.filter((t) => !seen.has(t.id))] })
       setNextpage(data.nextpage || '')
     }).catch(() => {})
   }
