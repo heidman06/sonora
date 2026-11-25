@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.1 - 2026-11-25
+- Desktop : suppression du halo rectangulaire sous le header (source du décalage noir en haut) ; header transparent au repos (aucun rectangle), opaque + filet + pleine largeur jusqu'au panneau uniquement au scroll ; l'état scrollé est branché sur le défilement interne de la colonne ; mobile inchangé
+
 ## v2.7.0 - 2026-11-25
 - Desktop : les mixes passent en vraie grille (plus de carte tranchée ni de fondu), barre de défilement invisible au repos et révélée au survol, bande vide à droite supprimée quand aucun titre ne joue (la place du panneau n'est réservée que s'il existe), halo ambiant accent en haut d'accueil, rythme resserré, état actif de la sidebar teinté ; mobile inchangé
 

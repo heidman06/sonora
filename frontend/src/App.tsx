@@ -88,6 +88,17 @@ export default function App() {
     return () => window.removeEventListener('wheel', onWheel)
   }, [])
 
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1000px)')
+    const view = document.querySelector('.view')
+    const top = document.querySelector('.top')
+    if (!view || !top) return
+    const onScroll = () => { if (mq.matches) top.classList.toggle('scrolled', view.scrollTop > 8) }
+    view.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => view.removeEventListener('scroll', onScroll)
+  }, [state.ready])
+
   const lang = state.lang as Lang
   const t = (key: string) => tr(lang, key)
 
