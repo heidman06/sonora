@@ -236,7 +236,7 @@ export class Api {
 }
 
 export function episodeToTrack(ep: PodcastEpisode, showImage?: string): Track {
-  return { id: 'ep' + ep.id, kind: 'episode', title: ep.title, artist: ep.showTitle, showTitle: ep.showTitle, showId: ep.showId, thumb: showImage || '', duration: ep.duration || 0, pubDate: ep.pubDate, src: ep.src }
+  return { id: 'ep' + ep.id, kind: 'episode', title: ep.title, artist: ep.showTitle, showTitle: ep.showTitle, showId: ep.showId, thumb: ep.showImage || showImage || '', duration: ep.duration || 0, pubDate: ep.pubDate, src: ep.src }
 }
 
 export function cleanArtist(a: string | null | undefined): string {

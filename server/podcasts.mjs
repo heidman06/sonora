@@ -72,7 +72,7 @@ const CURATED = {
 };
 function epRow(d, r, showTitle, userId) {
   const p = d.prepare('SELECT position, duration, completed FROM podcast_progress WHERE user_id = ? AND episode_id = ?').get(userId, r.id);
-  return { id: r.id, showId: r.show_id, showTitle, guid: r.guid, title: r.title, description: r.description, pubDate: r.pub_date, duration: r.duration, enclosureType: r.enclosure_type, unavailable: !!r.unavailable, src: signerSrc(r.id), progress: p || null };
+  return { id: r.id, showId: r.show_id, showTitle, showImage: r.show_image || '', guid: r.guid, title: r.title, description: r.description, pubDate: r.pub_date, duration: r.duration, enclosureType: r.enclosure_type, unavailable: !!r.unavailable, src: signerSrc(r.id), progress: p || null };
 }
 function showRow(d, r) { return { id: r.id, feedUrl: r.feed_url, itunesId: r.itunes_id, title: r.title, author: r.author, description: r.description, image: r.image, fetchedAt: r.fetched_at }; }
 async function refreshShow(d, show) {
@@ -160,7 +160,7 @@ export async function handlePodcasts(req, res, path, url) {
     const subM = route.match(/^subs\/(\d+)$/);
     if (subM && req.method === 'DELETE') { d.prepare('DELETE FROM podcast_subs WHERE user_id = ? AND show_id = ?').run(user.id, Number(subM[1])); json(200, { ok: true }); return true; }
     if (route === 'new' && req.method === 'GET') {
-      const rows = d.prepare("SELECT e.*, s.title AS show_title FROM podcast_episodes e JOIN podcast_subs u ON u.show_id = e.show_id JOIN podcast_shows s ON s.id = e.show_id LEFT JOIN podcast_progress p ON p.episode_id = e.id AND p.user_id = ? WHERE u.user_id = ? AND (p.completed IS NULL OR p.completed = 0) ORDER BY e.pub_date DESC, e.added_at DESC LIMIT 50").all(user.id, user.id);
+      const rows = d.prepare("SELECT e.*, s.title AS show_title, s.image AS show_image FROM podcast_episodes e JOIN podcast_subs u ON u.show_id = e.show_id JOIN podcast_shows s ON s.id = e.show_id LEFT JOIN podcast_progress p ON p.episode_id = e.id AND p.user_id = ? WHERE u.user_id = ? AND (p.completed IS NULL OR p.completed = 0) ORDER BY e.pub_date DESC, e.added_at DESC LIMIT 50").all(user.id, user.id);
       json(200, { episodes: rows.map((r) => epRow(d, r, r.show_title, user.id)) }); return true;
     }
     const progM = route.match(/^progress\/(\d+)$/);

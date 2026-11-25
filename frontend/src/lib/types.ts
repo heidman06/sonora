@@ -15,7 +15,7 @@ export interface Track {
 export interface PodDiscovery { feedUrl: string; title: string; author: string; description: string; logo: string | null }
 
 export interface PodcastShow { id: number; feedUrl: string; itunesId?: string | null; title: string; author: string; description: string; image: string; fetchedAt: number }
-export interface PodcastEpisode { id: number; showId: number; showTitle: string; guid: string; title: string; description: string; pubDate: string | null; duration: number; enclosureType: string; unavailable?: boolean; src: string; progress?: { position: number; duration: number; completed: number } | null }
+export interface PodcastEpisode { id: number; showId: number; showTitle: string; showImage?: string; guid: string; title: string; description: string; pubDate: string | null; duration: number; enclosureType: string; unavailable?: boolean; src: string; progress?: { position: number; duration: number; completed: number } | null }
 
 export interface Account { user: string; token: string }
 export interface AuthResponse { token: string; user: { id: number; username: string; display?: string } }

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.3 - 2026-11-25
+- Nouveaux épisodes : pochettes du show affichées (l'API /api/pod/new renvoie show_image ; avant, cases grises vides)
+
 ## v2.8.2 - 2026-11-25
 - Sélection podcasts = top 25 Apple par pays (FR: Les Grosses Têtes, US: The Daily, ES: El Partidazo de COPE) avec vraies pochettes ; plus de shows streamables par pays
 
