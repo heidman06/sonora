@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.1 - 2026-11-25
+- Nouveau logo/favicon : squircle sombre avec halo, disque dégradé rose→violet, anneau lumineux et bouton play blanc lisible dès 16 px ; icônes 180/192/512 + maskable régénérées, SVG source ajouté (frontend/public/icon.svg)
+
 ## v2.5.0 - 2026-11-25
 - Securite de l'exposition publique : passerelle dediee Sonora-only (allowlist, 404 hors Sonora, rate-limit par IP), inscription fermee par code d'invitation (SONORA_SIGNUP_CODE), /api/piped reserve aux sessions, en-tetes de securite, dashboard retire du 443 public (tailnet :8449)
 - Recherche : CTA « Connecte-toi pour chercher » pour les invites
