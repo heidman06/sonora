@@ -7,6 +7,8 @@ import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { handleMusique, utilisateurDuToken } from './musique.mjs';
+import { handlePodcasts } from './podcasts.mjs';
+import { handlePodcastAudio } from './podcast-audio.mjs';
 import { handleAudio } from './audio.mjs';
 import { handleSubsonic } from './subsonic.mjs';
 import { handleHls } from './hls.mjs';
@@ -75,6 +77,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (path.startsWith('/musique/hls/')) { await handleHls(req, res, path, url, { port: PORT, dataDir: process.env.SONORA_DATA || join(__dirname, '..', 'data'), ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg' }); return; }
     if (path.startsWith('/subsonic/rest')) { await handleSubsonic(req, res, path, url); return; }
+    if (await handlePodcasts(req, res, path, url)) return;
+    if (await handlePodcastAudio(req, res, path, url)) return;
     if (await handleAudio(req, res, path)) return;
     if (path.startsWith('/api/piped/')) {
       if (!utilisateurDuToken(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }).end('{"error":"token"}'); return; }

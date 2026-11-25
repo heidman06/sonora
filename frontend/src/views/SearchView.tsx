@@ -125,6 +125,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
     <>
       <h1 className="h1">{tr(lang, 'searchTitle')}</h1>
       <p className="sub">{tr(lang, 'searchSubtitle')}</p>
+      <div className="pod-search-entry"><a className="chip" href="#/podcasts"><Icon name="note" size={14} /> {tr(lang, 'podcasts')}</a></div>
       <div className="searchbar">
         <span className="s-ico"><Icon name="search" size={19} /></span>
         <input ref={inputRef} type="search" value={text} placeholder={tr(lang, 'searchPlaceholder')} autoComplete="off"

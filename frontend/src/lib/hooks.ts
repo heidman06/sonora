@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { applyAmbient, paletteFor } from './palette'
 
 export interface Route {
-  name: 'listen' | 'search' | 'library' | 'playlist' | 'artist' | 'liked' | 'smart' | 'stats' | 'mixes'
+  name: 'listen' | 'search' | 'library' | 'playlist' | 'artist' | 'liked' | 'smart' | 'stats' | 'mixes' | 'podcasts' | 'podshow' | 'podnew'
   id: string
   tab: 'listen' | 'search' | 'library'
 }
@@ -19,6 +19,9 @@ export function parseHash(hash: string): Route {
   if (name === 'smart') return { name: 'smart', id, tab: 'library' }
   if (name === 'stats') return { name: 'stats', id: '', tab: 'library' }
   if (name === 'mixes') return { name: 'mixes', id, tab: 'listen' }
+  if (name === 'podcasts') return { name: 'podcasts', id: '', tab: 'library' }
+  if (name === 'podshow') return { name: 'podshow', id, tab: 'library' }
+  if (name === 'podnew') return { name: 'podnew', id: '', tab: 'library' }
   return { name: 'listen', id: '', tab: 'listen' }
 }
 

@@ -103,6 +103,13 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
     <>
       <h1 className="h1">{tr(lang, 'library')}</h1>
       <p className="sub">{tr(lang, 'yourPlaylists')}</p>
+      <section className="section pod-lib">
+        <div className="section-head"><h2 className="section-title">{tr(lang, 'podcasts')}</h2><a className="section-link" href="#/podcasts">{tr(lang, 'podDiscover')}</a></div>
+        <div className="pod-lib-links">
+          <a className="chip" href="#/podcasts"><Icon name="note" size={14} /> {tr(lang, 'podDiscover')}</a>
+          <a className="chip" href="#/podnew"><Icon name="spark" size={14} /> {tr(lang, 'podNew')}</a>
+        </div>
+      </section>
       {(state.stale.playlists || state.stale.likes) && <div className="offline-note" role="status">{tr(lang, 'offlineBanner')}</div>}
       <div className="account">
         <div><b>{state.user}</b><br /><span>{state.playlists.length} {tr(lang, 'accountPlaylists')}</span></div>

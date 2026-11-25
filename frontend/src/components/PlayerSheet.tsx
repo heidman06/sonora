@@ -148,7 +148,7 @@ export function PlayerSheet(props: Props) {
         </div>
         {showLyrics && <div className="player-panels"><LyricsPanel track={current} lang={lang} currentTime={currentTime} onSeek={(s) => engine.seekTo(s)} /></div>}
         {showSleep && <div className="player-panels"><SleepPicker lang={lang} mode={state.sleep.mode} endsAt={state.sleep.endsAt} onPick={(m) => engine.setSleep(m)} /></div>}
-        {showRate && <div className="player-panels"><RatePicker lang={lang} rate={state.rate} hidden={state.hls} onPick={(r) => engine.setRate(r)} /></div>}
+        {showRate && <div className="player-panels"><RatePicker lang={lang} rate={state.rate} hidden={state.hls} episode={state.current?.kind === 'episode'} onPick={(r) => engine.setRate(r)} /></div>}
         <div className="player-foot">
           <button className="queue-btn" onClick={props.onQueue}>{tr(lang, 'queue')} <span>({state.queue.length})</span></button>
         </div>

@@ -4,6 +4,7 @@ import { storage, userKey } from '../lib/storage'
 import { tr } from '../lib/i18n'
 import { installSleep, type SleepMode } from './sleep'
 import { installCrossfade } from './crossfade'
+import { attachEpisodeProgress } from './episodeProgress'
 import type { Account, AuthResponse, DownloadRecord, Lang, PlaylistSummary, Track } from '../lib/types'
 
 export const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
@@ -132,7 +133,7 @@ export class PlayerEngine {
     installCrossfade({
       media: this.media,
       read: () => ({ hls: this.state.hls, repeat: this.state.repeat, currentTime: this.state.currentTime, duration: this.state.duration, volume: this.state.volume, sleepMode: this.state.sleep.mode, sleepEndsAt: this.state.sleep.endsAt, sleepHalted: this.sleepHalted }),
-      fade: () => this.state.crossfade,
+      fade: () => (this.state.current?.kind === 'episode' ? 0 : this.state.crossfade),
       next: () => { const n = this.state.queue[this.currentIndex() + 1]; return n ? { id: n.id, duration: n.duration || 0 } : null },
       startSecondary: async (src) => {
         if (!this.fadeMedia) {
@@ -393,7 +394,7 @@ export class PlayerEngine {
     this.bootGestureArmed = true
     if (!track || !track.id) { this.toast(tr(this.state.lang, 'toastTrackNotFound')); return }
     this.sleepHalted = false // intention de lecture utilisateur : le crossfade redevient opérant
-    const nextQueue = queue ? queue.slice() : (this.state.queue.some((t) => t.id === track.id) ? this.state.queue : [track, ...this.state.queue])
+    const nextQueue = queue ? queue.slice() : (this.state.queue.some((t) => t.id === track.id) ? this.state.queue : (this.state.queue.length && this.state.queue[0].kind !== track.kind ? [track] : [track, ...this.state.queue]))
     const qi = queue ? index : Math.max(0, nextQueue.findIndex((t) => t.id === track.id))
     this.intentPlay = true
     this.hls.active = false
@@ -412,6 +413,26 @@ export class PlayerEngine {
     await this.startDirect(track)
   }
 
+  private epCleanup: (() => void) | null = null
+
+  private setupEpisode(track: Track): void {
+    if (this.epCleanup) { this.epCleanup(); this.epCleanup = null }
+    if (track.kind !== 'episode') return
+    this.epCleanup = attachEpisodeProgress(this.media, track, this.api, () => this.playNext(false))
+  }
+
+  private srcOf(t: Track): string {
+    if (t.kind === 'episode') return t.src || ('/podcast/ep/' + encodeURIComponent(t.id.replace(/^ep/, '')))
+    return '/musique/dl/' + encodeURIComponent(t.id)
+  }
+
+  private applyRateForKind(): void {
+    const max = this.state.current?.kind === 'episode' ? 2 : 1.5
+    const r = Math.max(0.75, Math.min(max, this.state.rate || 1))
+    this.media.playbackRate = r
+    this.media.defaultPlaybackRate = r
+  }
+
   private async startDirect(track: Track): Promise<void> {
     try {
       const rec = await downloadGet(track.id).catch(() => null)
@@ -424,8 +445,10 @@ export class PlayerEngine {
         return
       }
       this.revokeBlob()
-      this.media.src = '/musique/dl/' + encodeURIComponent(track.id)
+      this.media.src = this.srcOf(track)
       this.media.load()
+      this.applyRateForKind()
+      this.setupEpisode(track)
       this.patch({ loadingTrack: '' })
       await this.playMedia()
       this.prefetchNext()
@@ -451,6 +474,7 @@ export class PlayerEngine {
 
   private async startHls(index: number): Promise<boolean> {
     if (!this.state.queue.length) return false
+    if (this.state.queue.some((t) => t.kind === 'episode')) return false
     if (Date.now() < this.hls.cooldownUntil) return false
     try {
       const queue = this.state.queue.slice(0, 60).filter((t) => t.id)
@@ -662,7 +686,8 @@ export class PlayerEngine {
   }
 
   setRate(r: number): void {
-    const rate = Math.max(0.75, Math.min(1.5, r))
+    const max = this.state.current?.kind === 'episode' ? 2 : 1.5
+    const rate = Math.max(0.75, Math.min(max, r))
     this.media.playbackRate = rate
     this.media.defaultPlaybackRate = rate
     if (this.fadeMedia) { this.fadeMedia.playbackRate = rate; this.fadeMedia.defaultPlaybackRate = rate }
@@ -729,7 +754,7 @@ export class PlayerEngine {
     if (this.state.downloads.some((d) => d.id === track.id && !d.missing) || this.state.downloading[track.id]) return
     this.patch({ downloading: { ...this.state.downloading, [track.id]: true } })
     try {
-      const res = await fetch('/musique/dl/' + encodeURIComponent(track.id), { cache: 'no-store' })
+      const res = await fetch(this.srcOf(track), { cache: 'no-store' })
       if (!res.ok) throw new Error('HTTP ' + res.status)
       const total = Number(res.headers.get('Content-Length')) || 0
       let blob: Blob
@@ -867,7 +892,7 @@ export class PlayerEngine {
       if (!current) return
       this.toast(tr(this.state.lang, 'toastReconnecting'))
       try { this.media.currentTime = pos } catch { /* noop */ }
-      this.media.src = '/musique/dl/' + encodeURIComponent(current.id) + '?r=' + Date.now()
+      this.media.src = this.srcOf(current) + '?r=' + Date.now()
       void this.playMedia()
     }, 9000)
   }
@@ -881,7 +906,7 @@ export class PlayerEngine {
     const idx = this.currentIndex()
     for (let k = 1; k <= 2; k++) {
       const next = list[idx + k]
-      if (next?.id) fetch('/musique/dl/' + encodeURIComponent(next.id), { method: 'HEAD' }).catch(() => {})
+      if (next?.id) fetch(this.srcOf(next), { method: 'HEAD' }).catch(() => {})
     }
   }
 

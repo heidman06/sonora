@@ -19,7 +19,7 @@ interface Props {
 export const TrackRow = memo(function TrackRow({ track, index, lang, liked, isCurrent, removable, menu }: Props) {
   return (
     <div className={'track' + (isCurrent ? ' is-current playing' : '')} role="button" tabIndex={0} data-action="play" data-id={track.id} data-index={index}>
-      <Art id={track.id} className="track-art" />
+      <Art id={track.kind === 'episode' ? '' : track.id} fallback={track.kind === 'episode' ? track.thumb : undefined} className="track-art" />
       <button className="tplay" type="button" data-action={isCurrent ? 'toggle' : 'play'} data-id={track.id} data-index={index} aria-label={tr(lang, isCurrent ? 'pause' : 'play')}>
         <Icon name={isCurrent ? 'pause' : 'play'} size={14} />
       </button>
@@ -28,10 +28,10 @@ export const TrackRow = memo(function TrackRow({ track, index, lang, liked, isCu
         <div className="track-title">{track.title}</div>
         <div className="track-sub">{track.artist || ''}</div>
       </div>
-      <button className={'tlike' + (liked ? ' liked' : '')} type="button" data-action="like" data-id={track.id} data-index={index} aria-label={tr(lang, 'liked')}>
+      {track.kind !== 'episode' && <button className={'tlike' + (liked ? ' liked' : '')} type="button" data-action="like" data-id={track.id} data-index={index} aria-label={tr(lang, 'liked')}>
         <Icon name={liked ? 'heartFill' : 'heart'} size={15} />
-      </button>
-      {menu && <button className="tmenu" type="button" data-action="menu" data-id={track.id} data-index={index} aria-label={tr(lang, 'menu')}><Icon name="dots" size={15} /></button>}
+      </button>}
+      {menu && track.kind !== 'episode' && <button className="tmenu" type="button" data-action="menu" data-id={track.id} data-index={index} aria-label={tr(lang, 'menu')}><Icon name="dots" size={15} /></button>}
       {removable && <button className="tremove" type="button" data-action="remove" data-id={track.id} data-index={index} aria-label={tr(lang, 'remove')}><Icon name="trash" size={14} /></button>}
       <span className="track-dur">{formatTime(track.duration || 0)}</span>
     </div>

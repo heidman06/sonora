@@ -1,9 +1,10 @@
 import type {
   Account, AuthResponse, HistoryItem, Lang, MixesResponse, MixSummary, MoodsResponse, PipedItem, PlaylistDetail, PlaylistSummary,
-  SearchResponse, Track,
+  SearchResponse, Track, PodcastShow, PodcastEpisode, PodDiscovery,
 } from './types'
 
 const MUS = '/api/mus'
+const POD = '/api/pod'
 const PIPED = '/api/piped'
 
 export class ApiError extends Error {
@@ -166,13 +167,24 @@ export class Api {
   }
 
   pushHistory(track: Track): void {
-    if (!this.token) return
+    if (!this.token || track.kind === 'episode') return
     fetch(MUS + '/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.token },
       body: JSON.stringify({ videoId: track.id, title: track.title, artist: track.artist, duration: track.duration || 0 }),
     }).catch(() => {})
   }
+
+  podSearch(q: string): Promise<{ results: PodDiscovery[] }> { return this.json(POD + '/search?q=' + encodeURIComponent(q)) }
+  podCurated(lang: string): Promise<{ results: PodDiscovery[] }> { return this.json(POD + '/curated?lang=' + lang) }
+  podAddShow(feedUrl: string, itunesId?: string): Promise<{ show: PodcastShow; episodes: PodcastEpisode[] }> { return this.json(POD + '/shows', this.body(itunesId ? { feedUrl, itunesId } : { feedUrl })) }
+  podShow(id: number, refresh = false): Promise<{ show: PodcastShow; stale: boolean; episodes: PodcastEpisode[] }> { return this.json(POD + '/shows/' + id + (refresh ? '?refresh=1' : '')) }
+  podSubs(): Promise<{ shows: PodcastShow[] }> { return this.json(POD + '/subs') }
+  podSub(showId: number): Promise<{ ok: boolean }> { return this.json(POD + '/subs', this.body({ showId })) }
+  podUnsub(showId: number): Promise<{ ok: boolean }> { return this.json(POD + '/subs/' + showId, { method: 'DELETE' }) }
+  podNew(): Promise<{ episodes: PodcastEpisode[] }> { return this.json(POD + '/new') }
+  podProgress(epId: number): Promise<{ progress: { position: number; duration: number; completed: number } | null }> { return this.json(POD + '/progress/' + epId) }
+  podSaveProgress(epId: number, position: number, duration: number, completed: boolean): Promise<{ ok: boolean }> { return this.json(POD + '/progress', this.body({ episodeId: epId, position, duration, completed })) }
 
   recos(n = 16): Promise<Track[]> {
     return this.json<Array<Record<string, unknown>>>(MUS + '/recos?n=' + n).then((list) => list.map(normalizeTrack))
@@ -221,6 +233,10 @@ export class Api {
   channel(id: string): Promise<PipedPlaylist & { description?: string; avatarUrl?: string }> {
     return this.json(PIPED + '/channel/' + encodeURIComponent(id))
   }
+}
+
+export function episodeToTrack(ep: PodcastEpisode, showImage?: string): Track {
+  return { id: 'ep' + ep.id, kind: 'episode', title: ep.title, artist: ep.showTitle, showTitle: ep.showTitle, showId: ep.showId, thumb: showImage || '', duration: ep.duration || 0, pubDate: ep.pubDate, src: ep.src }
 }
 
 export function cleanArtist(a: string | null | undefined): string {

@@ -854,6 +854,7 @@ export function handleMusique(req, res, path, url) {
         if (!d.prepare('SELECT id FROM playlists WHERE id = ? AND user_id = ?').get(pid, u.id)) return json(404, { error: 'playlist' });
         const b = await corps(req);
         let vid = String(b.videoId || '');
+        if (/^ep/.test(vid)) return json(400, { error: 'episode' });
         let titre = texte(b.title, 300), artiste = texte(b.artist, 300);
         if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) {
           const r = await resoudre(b.title, b.artist);
@@ -880,6 +881,7 @@ export function handleMusique(req, res, path, url) {
         try {
           for (const t of tracks) {
             const vid = String(t.videoId || t.id || '');
+            if (/^ep/.test(vid)) continue;
             if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) continue;
             const r = inser.run(pid, vid, texte(t.title, 300), texte(t.artist, 300), pid);
             if (r.changes) added++;
@@ -932,6 +934,7 @@ export function handleMusique(req, res, path, url) {
       if (route === '/likes' && req.method === 'POST') {
         const b = await corps(req);
         let vid = String(b.videoId || '');
+        if (/^ep/.test(vid)) return json(400, { error: 'episode' });
         b.title = texte(b.title, 300); b.artist = texte(b.artist, 300);
         if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) {
           const r = await resoudre(b.title, b.artist);
@@ -963,7 +966,7 @@ export function handleMusique(req, res, path, url) {
         const b = await corps(req);
         const vid = String(b.videoId || '');
         const action = String(b.action || 'dismiss');
-        if (!/^[A-Za-z0-9_-]{11}$/.test(vid) || (action !== 'dismiss' && action !== 'like')) return json(400, { error: 'parametres' });
+        if (!/^[A-Za-z0-9_-]{11}$/.test(vid) || /^ep/.test(vid) || (action !== 'dismiss' && action !== 'like')) return json(400, { error: 'parametres' });
         d.prepare('INSERT INTO reco_feedback (user_id, video_id, action) VALUES (?, ?, ?) ON CONFLICT(user_id, video_id) DO UPDATE SET action = excluded.action, at = datetime(\'now\')').run(u.id, vid, action);
         if (action === 'like') {
           const meta = metaConnue(d, vid);
@@ -995,7 +998,7 @@ export function handleMusique(req, res, path, url) {
       if (route === '/history' && req.method === 'POST') {
         const b = await corps(req);
         const vid = String(b.videoId || '');
-        if (!/^[A-Za-z0-9_-]{11}$/.test(vid)) return json(400, { error: 'videoId' });
+        if (!/^[A-Za-z0-9_-]{11}$/.test(vid) || /^ep/.test(vid)) return json(400, { error: 'videoId' });
         pousseHistory(d, u.id, vid, b.title, b.artist, b.duration);
         return json(200, { ok: true });
       }

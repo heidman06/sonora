@@ -8,7 +8,7 @@ const PORT = Number(process.env.GATEWAY_PORT || 3012)
 const HOST = process.env.GATEWAY_HOST || '127.0.0.1'
 const TARGET = new URL(process.env.GATEWAY_TARGET || 'http://127.0.0.1:3011')
 
-const ALLOW = [/^\/musique\//, /^\/musique-legacy\//, /^\/api\/mus\//, /^\/api\/piped\//, /^\/api\/img\//, /^\/subsonic\//]
+const ALLOW = [/^\/musique\//, /^\/musique-legacy\//, /^\/api\/mus\//, /^\/api\/piped\//, /^\/api\/img\//, /^\/subsonic\//, /^\/api\/pod\//, /^\/podcast\/ep\//]
 const LIMITS = [
   { re: /^\/api\/mus\/login$/, n: 10, w: 60000 },
   { re: /^\/api\/mus\/register$/, n: 5, w: 3600000 },
@@ -16,6 +16,7 @@ const LIMITS = [
   { re: /^\/api\/img\//, n: 1200, w: 60000 },
   { re: /^\/api\/piped\//, n: 120, w: 60000 },
   { re: /^\/subsonic\//, n: 180, w: 60000 },
+  { re: /^\/podcast\/ep\//, n: 120, w: 60000 },
 ]
 const BUCKETS = new Map()
 setInterval(() => { const now = Date.now(); for (const [k, b] of BUCKETS) if (now - b.at > 3600000) BUCKETS.delete(k) }, 300000).unref()

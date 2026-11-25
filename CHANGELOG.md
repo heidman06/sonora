@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.0 - 2026-11-25
+- Podcasts façon Spotify : découverte gpodder (sans clé) + sélection FR/EN/ES + import RSS manuel ; page show (pochette/description/suivre/refresh), nouveaux épisodes, reprise de progression per-compte, vitesse jusqu'à 2× sur les épisodes, sleep/download réutilisés ; audio épisodes proxy Range + cache séparé + URL signées HMAC ; garde anti-SSRF (https strict, IP privées/DNS pin, redirects re-gardés) ; gardes 'ep' serveur (likes/playlists/history/feedback) ; file séparée musique/épisodes ; mobile 3 onglets intact ; 89 tests serveur + 91 vitest verts
+
 ## v2.7.3 - 2026-11-25
 - Desktop : correction d'une régression de la v2.7.2 — le remplissage accent des sliders seek/volume avait été écrasé par un fond gris plat (le niveau ne se voyait plus) ; le dégradé accent piloté par --fill est restauré, pouces recentrés verticalement (margin-top -4/-3px) ; le curseur reflète de nouveau le niveau réel
 

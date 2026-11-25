@@ -27,6 +27,10 @@ export function DesktopSidebar({ lang, state, route }: Props) {
         ))}
       </nav>
       <div className="side-sep" />
+      <div className="side-label">{tr(lang, 'podcasts')}</div>
+      <a className={'side-link' + (route.name === 'podcasts' || route.name === 'podshow' ? ' on' : '')} href="#/podcasts"><Icon name="note" size={20} /><span>{tr(lang, 'podDiscover')}</span></a>
+      <a className={'side-link' + (route.name === 'podnew' ? ' on' : '')} href="#/podnew"><Icon name="spark" size={20} /><span>{tr(lang, 'podNew')}</span></a>
+      <div className="side-sep" />
       <div className="side-label">{tr(lang, 'yourPlaylists')}</div>
       <div className="side-playlists">
         {state.playlists.slice(0, 8).map((playlist) => (

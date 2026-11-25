@@ -14,6 +14,7 @@ interface Props {
 
 // Menu ⋯ par titre (design échelle C1, features F6) : chaque action ferme la feuille.
 export function ActionSheet({ track, lang, onClose, onPlayNext, onEnqueue, onAdd, onRadio }: Props) {
+  if (track.kind === 'episode') return null
   const rows: Array<{ key: string; icon: 'next' | 'queue' | 'plus' | 'radio'; run: (t: Track) => void }> = [
     { key: 'playNext', icon: 'next', run: onPlayNext },
     { key: 'addToQueue', icon: 'queue', run: onEnqueue },

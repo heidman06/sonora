@@ -23,6 +23,9 @@ import { LikedView } from './views/LikedView'
 import { SmartView } from './views/SmartView'
 import { StatsView } from './views/StatsView'
 import { MixesView } from './views/MixesView'
+import { PodcastsView } from './views/PodcastsView'
+import { PodcastShowView } from './views/PodcastShowView'
+import { PodNewView } from './views/PodNewView'
 import { ActionSheet } from './components/ActionSheet'
 import { UpdateBanner } from './components/UpdateBanner'
 import { applyUpdate } from './lib/sw'
@@ -163,6 +166,9 @@ export default function App() {
         {route.name === 'smart' && <SmartView lang={lang} state={state} id={route.id} />}
         {route.name === 'stats' && <StatsView lang={lang} state={state} />}
       {route.name === 'mixes' && <MixesView lang={lang} state={state} id={route.id} onPlay={play} onMenu={setActionTrack} />}
+      {route.name === 'podcasts' && <PodcastsView lang={lang} state={state} />}
+      {route.name === 'podshow' && <PodcastShowView lang={lang} state={state} id={route.id} />}
+      {route.name === 'podnew' && <PodNewView lang={lang} state={state} />}
       </main>
 
       <MiniPlayer state={state} lang={lang} onOpen={() => setPlayerOpen(true)} onToggle={() => engine.togglePlay()} onNext={() => engine.playNext(false)} />
