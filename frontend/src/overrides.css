@@ -482,9 +482,9 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .section-link { font-size: 12.5px; color: var(--txt-2); }
   .section-link:hover { color: var(--txt); }
   /* sliders fins et cohérents */
-  .dp-seek input[type="range"], .dp-vol input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; background: rgba(128,128,128,.28); outline: none; }
-  .dp-seek input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--txt); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
-  .dp-vol input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: var(--txt); }
+  .dp-seek input[type="range"], .dp-vol input[type="range"] { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; outline: none; }
+  .dp-seek input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: var(--txt); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+  .dp-vol input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3px; border-radius: 50%; background: var(--txt); }
   .dp-seek input[type="range"]::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: var(--txt); }
   .dp-vol input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: var(--txt); }
   /* sidebar : rythme et séparateurs discrets */

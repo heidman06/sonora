@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.3 - 2026-11-25
+- Desktop : correction d'une régression de la v2.7.2 — le remplissage accent des sliders seek/volume avait été écrasé par un fond gris plat (le niveau ne se voyait plus) ; le dégradé accent piloté par --fill est restauré, pouces recentrés verticalement (margin-top -4/-3px) ; le curseur reflète de nouveau le niveau réel
+
 ## v2.7.2 - 2026-11-25
 - Desktop : icônes au trait unifié 1.6 (au lieu de 1.8) et tailles optiques cohérentes par contexte (sidebar 18, player 17-18, lignes 16, header 16), hiérarchie de couleur txt-3→txt→accent, sliders seek/volume fins (pouce 12/10px), durées et sous-titres en tabular/teinte discrète, boutons header 36px homogènes ; mobile conserve le trait 1.8 d'origine
 
