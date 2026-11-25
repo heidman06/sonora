@@ -46,9 +46,6 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
     <td align="center"><img src="docs/screenshots/desktop-panel.png" width="250" alt="Sonora desktop now-playing panel"><br><sub>Desktop ≥1500 px — now-playing panel</sub></td>
   </tr>
   <tr>
-    <td colspan="3" align="center"><img src="docs/screenshots/desktop-light.png" width="820" alt="Sonora desktop light theme"><br><sub>Desktop, light theme</sub></td>
-  </tr>
-  <tr>
     <td colspan="3" align="center"><img src="docs/screenshots/desktop-dark.png" width="820" alt="Sonora desktop dark theme"><br><sub>Desktop, dark theme</sub></td>
   </tr>
 </table>
