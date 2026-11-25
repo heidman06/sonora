@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.5.7 - 2026-11-25
+- Hover des titres adouci (scale 1.06 au lieu de 1.5, z-index du bouton) : le bouton play/pause n'est plus recouvert
+- Mixes des comptes froids : 3 mixes remplis (18 titres + 4 pochettes chacun) depuis resolve_cache, au lieu de coquilles vides ; clic = lecture directe
+
 ## v2.5.6 - 2026-11-25
 - Recherche : doublons supprimés (dedupe par videoId, y compris au chargement suivant)
 - Égaliseur : l'animation se fige réellement en pause (attribut data-playing + animation-play-state)

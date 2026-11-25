@@ -650,6 +650,18 @@ function mixes2sync(userId) {
   const rec = Array.isArray(recRaw) ? recRaw : (recRaw && Array.isArray(recRaw.items) ? recRaw.items : []);
   const corpusDistincts = new Set([].concat(likes, history90, playlists, boucle, archives).map((r) => r.video_id)).size;
   const resp = composerMixes({ userId, seedJour, affinites: aff, likes, history90, playlists, boucle, archives, rejetes: rejSet, recos: rec, corpusDistincts });
+  if (resp && resp.cold) {
+    try {
+      const pool = q('SELECT DISTINCT video_id, title, artist FROM resolve_cache WHERE video_id IS NOT NULL AND length(video_id) = 11 LIMIT 240');
+      if (pool.length) {
+        resp.mixes = resp.mixes.map((mix, i) => {
+          const shuffled = melangerSeede(pool, userId + ':' + seedJour + ':' + mix.key);
+          const list = shuffled.slice(i * 18, i * 18 + 18).map((r) => ({ videoId: r.video_id, title: r.title || '', artist: r.artist || '', duration: 0, seed: r.artist || '', source: 'cold' }));
+          return Object.assign({}, mix, { tracks: list, count: list.length, cover: list.slice(0, 4).map((t) => t.videoId) });
+        });
+      }
+    } catch (e) { /* noop */ }
+  }
   try { d.prepare('INSERT INTO mix_cache (user_id, json, at, seed) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET json = excluded.json, at = excluded.at, seed = excluded.seed').run(userId, JSON.stringify(resp), Date.now(), seedJour); } catch (e) {}
   mixesCache.set(userId, { at: Date.now(), seed: seedJour, resp });
   if (mixesCache.size > 50) mixesCache.delete(mixesCache.keys().next().value);

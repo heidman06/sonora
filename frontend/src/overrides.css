@@ -201,7 +201,7 @@
   #player .player-art { width: 230px; height: 230px; }
 }
 
-.tplay { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 9px; border: 0; background: transparent; color: var(--txt-2); margin-right: 2px; }
+.tplay { position: relative; z-index: 6; width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: 9px; border: 0; background: transparent; color: var(--txt-2); margin-right: 2px; }
 .tplay:hover, .tplay:active { color: var(--txt); background: var(--surface-2); }
 @media (max-width: 699px) { .tplay { width: 40px; height: 40px; } }
 .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; flex: none; margin-right: 2px; }
@@ -310,6 +310,6 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 /* preview pochette hover (S7) : scale 1.5, origin left, >=1000 px, reduce off */
 @media (min-width: 1000px) and (prefers-reduced-motion: no-preference) {
   .track-art { transition: transform .16s ease-out; }
-  .track:hover .track-art { position: relative; z-index: 5; transform: scale(1.5); transform-origin: left center; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  .track:hover .track-art { position: relative; z-index: 2; transform: scale(1.06); transform-origin: left center; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
 }
 
