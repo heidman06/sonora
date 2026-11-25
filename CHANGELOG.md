@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.2 - 2026-11-25
+- Desktop : molette fonctionnelle partout (sidebar/header/panneau, sauf zones scrollables), header opaque (fini le contenu qui bave dessous) avec hairline au scroll, hairline du panneau file, padding bas de colonne
+
 ## v2.6.1 - 2026-11-25
 - Desktop : le contenu défile dans sa colonne (plus de scrollbar à l'extrême droite de la fenêtre) avec une barre fine, arrondie et discrète (thumb 3px de marge, couleur token, hover plus contrasté, min 40px) ; html/body figés à >=1000px pour éviter le double scroll ; mobile <=999px inchangé
 

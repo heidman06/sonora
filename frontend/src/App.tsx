@@ -71,6 +71,23 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1000px)')
+    const onWheel = (e: WheelEvent) => {
+      if (!mq.matches) return
+      const target = e.target as HTMLElement | null
+      const view = document.querySelector('.view') as HTMLElement | null
+      if (!view || !target) return
+      if (target.closest('.view')) return
+      if (target.closest('#np-panel, .np-queue, .sheet, .queue-sheet, .pl-actions, [data-scroll-own]')) return
+      if (!e.deltaY) return
+      e.preventDefault()
+      view.scrollTop += e.deltaY
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
+
   const lang = state.lang as Lang
   const t = (key: string) => tr(lang, key)
 
