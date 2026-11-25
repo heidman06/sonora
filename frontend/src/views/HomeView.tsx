@@ -157,22 +157,32 @@ export function HomeView({ lang, state, onPlay }: Props) {
 
       <section className="section">
         <div className="section-head"><h2 className="section-title">{tr(lang, 'yourMixes')}</h2>{state.token && <a className="section-link" href="#/mixes">{tr(lang, 'seeAll')}</a>}</div>
-        <div className="row-scroll">
-          {mixesLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className="skel" style={{ width: 152, height: 152, borderRadius: 18 }} />)}
-          {!mixesLoading && !mixes.length && <div className="empty" style={{ padding: '18px 0', opacity: 0.6, fontSize: 13 }}>{tr(lang, 'mixesEmpty')}</div>}
-          {mixes.slice(0, 12).map((mix) => {
-            return (
-              <button className="card mix-card" key={mix.key} onClick={() => playMix(mix)}>
-                <div className="card-art-wrap">
-                  <MixArt cover={mix.cover} />
-                  <span className="card-play"><Icon name="play" size={15} /></span>
-                </div>
-                <div className="card-title">{mixLabel(lang, mix)}</div>
-                <div className="card-sub">{mixSubtitle(lang, mix)}</div>
-              </button>
-            )
-          })}
-        </div>
+        {!state.token ? (
+          <div className="mixes-guest">
+            <div className="mixes-guest-txt">
+              <b>{tr(lang, 'mixesGuestTitle')}</b>
+              <span>{tr(lang, 'mixesGuestHint')}</span>
+            </div>
+            <a className="btn-primary" href="#/library">{tr(lang, 'signIn')}</a>
+          </div>
+        ) : (
+          <div className="row-scroll">
+            {mixesLoading && Array.from({ length: 4 }, (_, i) => <div key={i} className="skel" style={{ width: 152, height: 152, borderRadius: 18 }} />)}
+            {!mixesLoading && !mixes.length && <div className="empty" style={{ padding: '18px 0', opacity: 0.6, fontSize: 13 }}>{tr(lang, 'mixesEmpty')}</div>}
+            {mixes.slice(0, 12).map((mix) => {
+              return (
+                <button className="card mix-card" key={mix.key} onClick={() => playMix(mix)}>
+                  <div className="card-art-wrap">
+                    <MixArt cover={mix.cover} />
+                    <span className="card-play"><Icon name="play" size={15} /></span>
+                  </div>
+                  <div className="card-title">{mixLabel(lang, mix)}</div>
+                  <div className="card-sub">{mixSubtitle(lang, mix)}</div>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </section>
 
       <section className="section">

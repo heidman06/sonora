@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.4.7 - 2026-11-25
+- Accueil invité : plus de fausses cartes de mix (coquilles à pochettes vides qui ressemblaient à un chargement infini) — une carte « Connecte-toi pour tes mixes » avec bouton Sign in ; les comptes froids gardent leurs mixes de secours avec une tuile typée au lieu de cases grises
+
 ## v2.4.6 - 2026-11-25
 - Lecteur : refonte verre Apple — bouton fermer dégagé des bords (inset 16/12 + safe-area), pochette réduite (58vw/260 px, 56vw/230 ≤400 px) pour rendre de l'espace vertical, contrôles et actions en verre translucide (hairline, highlight interne, blur saturé, ombre douce), état actif teinté accent, espacements resserrés (meta 18, controls 14, player 8)
 

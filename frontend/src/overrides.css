@@ -247,6 +247,11 @@
 .foot-label { color: var(--txt-2); }
 .queue-btn { margin-top: 10px; }
 @media (max-width: 400px) { .player-art { width: min(56vw, 230px); } }
+.mix-art-fallback { display: grid; place-items: center; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface-2)), var(--surface)); color: var(--txt-2); }
+.mixes-guest { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 20px; background: var(--glass-2); border: 1px solid var(--glass-line); backdrop-filter: blur(18px) saturate(180%); }
+.mixes-guest-txt { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mixes-guest-txt b { font-size: 15px; font-weight: 750; }
+.mixes-guest-txt span { font-size: 12.5px; color: var(--txt-2); }
 .mix-art { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 100%; aspect-ratio: 1; border-radius: 18px; overflow: hidden; background: var(--surface-2); }
 .mix-art img { width: 100%; height: 100%; object-fit: cover; }
 .mix-art-empty { background: var(--surface-2); }
