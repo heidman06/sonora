@@ -210,7 +210,7 @@ export async function topPodcasts(lang) {
   const c = itCache.get(key);
   if (c && Date.now() - c.at < 30 * 60 * 1000 && c.rows) return c.rows;
   try {
-    const j = await itunes(cc + '/rss/toppodcasts/limit=12/json', key, 30 * 60 * 1000);
+    const j = await itunes(cc + '/rss/toppodcasts/limit=25/json', key, 30 * 60 * 1000);
     const entries = (j.feed && j.feed.entry) || [];
     const out = [];
     for (const e of entries) {

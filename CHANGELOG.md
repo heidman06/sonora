@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.2 - 2026-11-25
+- Sélection podcasts = top 25 Apple par pays (FR: Les Grosses Têtes, US: The Daily, ES: El Partidazo de COPE) avec vraies pochettes ; plus de shows streamables par pays
+
 ## v2.8.1 - 2026-11-25
 - Scrollbars desktop fines et discrètes partout (file d'attente, sheets, panneau droit) : plus de barre native claire à droite ; révélées au survol
 - Découverte podcasts : iTunes Search par pays (FR/US/ES) avec feedUrl + fallback gpodder ; Sélection = top podcasts Apple par pays (les plus écoutés) avec vraies pochettes ; « jordi wild » (ES) trouve désormais The Wild Project
