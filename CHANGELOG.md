@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.3 - 2026-11-25
+- Inscription : champ « Code d'invitation » dans le formulaire (mode création de compte) + message explicite en cas de code requis/invalide ; api.register/engine.register transmettent le code
+
 ## v2.5.2 - 2026-11-25
 - Logo aligné sur la marque retenue : squircle dégradé corail→magenta→violet avec waveform blanche (3 barres arrondies) ; favicon, icônes 180/192/512 et maskable régénérées, sources SVG à jour
 

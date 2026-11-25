@@ -266,8 +266,8 @@ export class PlayerEngine {
     return this.applyAuth(result)
   }
 
-  async register(username: string, password: string): Promise<Account> {
-    const result = await this.api.register(username, password)
+  async register(username: string, password: string, code?: string): Promise<Account> {
+    const result = await this.api.register(username, password, code)
     return this.applyAuth(result)
   }
 

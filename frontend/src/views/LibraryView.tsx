@@ -28,6 +28,7 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [showAddAccount, setShowAddAccount] = useState(false)
@@ -46,8 +47,8 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
     setBusy(true); setError('')
     try {
       if (mode === 'login') await engine.login(username.trim(), password)
-      else await engine.register(username.trim(), password)
-      setUsername(''); setPassword(''); setShowAddAccount(false)
+      else await engine.register(username.trim(), password, inviteCode.trim() || undefined)
+      setUsername(''); setPassword(''); setInviteCode(''); setShowAddAccount(false)
     } catch (err) {
       setError(authMessage(err, lang))
     } finally { setBusy(false) }
@@ -75,6 +76,8 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
           <form onSubmit={submit}>
             <div className="field"><input value={username} placeholder={tr(lang, 'username')} autoCapitalize="none" autoComplete="username" onChange={(e) => setUsername(e.target.value)} /></div>
             <div className="field"><input value={password} type="password" placeholder={tr(lang, 'password')} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} /></div>
+            {mode === 'register' && <div className="field"><input value={inviteCode} placeholder={tr(lang, 'inviteCode')} autoComplete="off" onChange={(e) => setInviteCode(e.target.value)} /></div>}
+            {mode === 'register' && <p className="sub" style={{ margin: '-4px 0 10px', fontSize: 12 }}>{tr(lang, 'inviteCodeHint')}</p>}
             <button className="btn-wide" type="submit" disabled={busy}>{busy ? tr(lang, 'loggingIn') : mode === 'login' ? tr(lang, 'signIn') : tr(lang, 'createAccount')}</button>
             <button type="button" className="reg-link" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError('') }}>
               {mode === 'login' ? tr(lang, 'createAccount') : tr(lang, 'signIn')}
@@ -217,6 +220,7 @@ function authMessage(err: unknown, lang: Lang): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return tr(lang, 'loginError')
     if (err.status === 409) return tr(lang, 'registerTaken')
+    if (err.status === 403) return tr(lang, 'inviteCodeInvalid')
     if (err.status === 400) {
       if (/nom invalide/.test(err.message)) return tr(lang, 'registerUsername')
       if (/trop court/.test(err.message)) return tr(lang, 'registerPassword')

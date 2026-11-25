@@ -56,8 +56,8 @@ export class Api {
     return this.json<AuthResponse>(MUS + '/login', this.body({ username, password }), false)
   }
 
-  register(username: string, password: string): Promise<AuthResponse> {
-    return this.json<AuthResponse>(MUS + '/register', this.body({ username, password }), false)
+  register(username: string, password: string, code?: string): Promise<AuthResponse> {
+    return this.json<AuthResponse>(MUS + '/register', this.body(code ? { username, password, code } : { username, password }), false)
   }
 
   async logout(): Promise<void> {
