@@ -63,7 +63,9 @@ export function NowPlayingPanel({ lang, state, onQueue }: Props) {
           : <div className="np-lyrics-none">{tr(lang, 'lyricsUnavailable')}</div>}
       </div>
       <div className="np-queue-head">{tr(lang, 'queue')}</div>
-      {nextRows.map(({ t, i }) => <NpRow key={t.id + i} track={t} index={i} onPlay={playRow} />)}
+      <div className="np-queue">
+        {nextRows.map(({ t, i }) => <NpRow key={t.id + i} track={t} index={i} onPlay={playRow} />)}
+      </div>
       <div className="np-actions">
         <button className="np-action" type="button" aria-label={state.playing ? tr(lang, 'pause') : tr(lang, 'play')} onClick={() => engine.togglePlay()}>
           <Icon name={state.playing ? 'pause' : 'play'} size={18} />

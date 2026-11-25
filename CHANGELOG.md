@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.3 - 2026-11-25
+- Desktop : gouttière de 18px entre le contenu et la barre de défilement (la barre ne chevauche plus les cartes), fondu de 26px en bout des rangées horizontales, panneau droit repensé (pochette arrondie 20px, file scrollable indépendante, actions épinglées sous un filet), respiration basse de colonne ; mobile inchangé
+
 ## v2.6.2 - 2026-11-25
 - Desktop : molette fonctionnelle partout (sidebar/header/panneau, sauf zones scrollables), header opaque (fini le contenu qui bave dessous) avec hairline au scroll, hairline du panneau file, padding bas de colonne
 
