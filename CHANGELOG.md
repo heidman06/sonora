@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.2 - 2026-11-25
+- Desktop : icônes au trait unifié 1.6 (au lieu de 1.8) et tailles optiques cohérentes par contexte (sidebar 18, player 17-18, lignes 16, header 16), hiérarchie de couleur txt-3→txt→accent, sliders seek/volume fins (pouce 12/10px), durées et sous-titres en tabular/teinte discrète, boutons header 36px homogènes ; mobile conserve le trait 1.8 d'origine
+
 ## v2.7.1 - 2026-11-25
 - Desktop : suppression du halo rectangulaire sous le header (source du décalage noir en haut) ; header transparent au repos (aucun rectangle), opaque + filet + pleine largeur jusqu'au panneau uniquement au scroll ; l'état scrollé est branché sur le défilement interne de la colonne ; mobile inchangé
 
