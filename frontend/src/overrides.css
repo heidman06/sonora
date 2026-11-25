@@ -364,3 +364,25 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .searchbar { max-width: 640px; }
   .searchbar input { height: 48px; border-radius: 14px; }
 }
+/* ===== Desktop inner scroll + fine scrollbar (>=1000px) ===== */
+@media (min-width: 1000px) {
+  html, body { overflow: hidden; }
+  .app { height: 100dvh; overflow: hidden; }
+  .app .view {
+    height: calc(100dvh - 180px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .app .view::-webkit-scrollbar { width: 10px; }
+  .app .view::-webkit-scrollbar-track { background: transparent; }
+  .app .view::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--txt-2) 38%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    min-height: 40px;
+  }
+  .app .view::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--txt-2) 62%, transparent); background-clip: content-box; border: 3px solid transparent; }
+  .app .view::-webkit-scrollbar-corner { background: transparent; }
+}

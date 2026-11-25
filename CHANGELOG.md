@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.1 - 2026-11-25
+- Desktop : le contenu défile dans sa colonne (plus de scrollbar à l'extrême droite de la fenêtre) avec une barre fine, arrondie et discrète (thumb 3px de marge, couleur token, hover plus contrasté, min 40px) ; html/body figés à >=1000px pour éviter le double scroll ; mobile <=999px inchangé
+
 ## v2.6.0 - 2026-11-25
 - Desktop : couche visuelle append-only (>=1000px) — contenu centré à 1040px, H1 40px, chips et titres resserrés, cartes 184px, lignes de pistes plus denses, recherche 640px, en-têtes conservés au scroll, hovers thème clair via tokens, rayons de focus corrects, reduced-motion respecté ; mobile <=999px strictement inchangé
 
