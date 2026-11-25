@@ -114,10 +114,10 @@ export async function handlePodcasts(req, res, path, url) {
     if (route === 'search' && req.method === 'GET') {
       const q = (url.searchParams.get('q') || '').trim();
       if (!q) { json(200, { results: [] }); return true; }
-      try { json(200, { results: await gpodder(q) }); } catch (e) { json(502, { error: 'fetch', code: e.code }); }
+      json(200, { results: await searchPodcasts(q, url.searchParams.get('lang') || 'en') });
       return true;
     }
-    if (route === 'curated' && req.method === 'GET') { json(200, { results: CURATED[url.searchParams.get('lang')] || CURATED.en }); return true; }
+    if (route === 'curated' && req.method === 'GET') { json(200, { results: await topPodcasts(url.searchParams.get('lang') || 'en') }); return true; }
     if (route === 'shows' && req.method === 'POST') {
       const b = await corps();
       const feedUrl = String(b.feedUrl || '').trim();
@@ -176,4 +176,63 @@ export async function handlePodcasts(req, res, path, url) {
     }
     json(404, { error: 'not_found' }); return true;
   } catch (e) { json(500, { error: String(e.message || e) }); return true; }
+}
+// Découverte : iTunes Search par pays (feedUrl) + charts top podcasts + fallback gpodder.
+const CC = { fr: 'FR', en: 'US', es: 'ES' };
+const itCache = new Map();
+async function itunes(path, key, ttl) {
+  const c = itCache.get(key);
+  if (c && Date.now() - c.at < ttl) return c.json;
+  const r = await safeFetchBuffer('https://itunes.apple.com/' + path, { maxBytes: 4 * 1024 * 1024, timeoutMs: 10000 });
+  if (r.status !== 200) throw Object.assign(new Error('itunes'), { code: 'fetch' });
+  const json = JSON.parse(r.buffer.toString('utf8'));
+  itCache.set(key, { at: Date.now(), json });
+  if (itCache.size > 60) itCache.delete(itCache.keys().next().value);
+  return json;
+}
+function mapItunes(r) { return { feedUrl: r.feedUrl, title: r.collectionName || r.trackName || '', author: r.artistName || '', description: '', logo: r.artworkUrl600 || null }; }
+async function searchItunes(q, cc) {
+  const j = await itunes('search?media=podcast&country=' + cc + '&limit=12&term=' + encodeURIComponent(q), 's:' + cc + ':' + q.toLowerCase(), 5 * 60 * 1000);
+  return (j.results || []).filter((r) => r.feedUrl).map(mapItunes);
+}
+async function resolveFeed(id, title, cc) {
+  try { const j = await itunes('lookup?id=' + id, 'l:' + id, 30 * 60 * 1000); const r = (j.results || [])[0]; if (r && r.feedUrl) return r.feedUrl; } catch (e) {}
+  try {
+    const j = await itunes('search?media=podcast&country=' + cc + '&limit=5&term=' + encodeURIComponent(title), 't:' + cc + ':' + title.toLowerCase(), 30 * 60 * 1000);
+    const r = (j.results || []).find((x) => String(x.collectionId) === String(id)) || (j.results || [])[0];
+    if (r && r.feedUrl) return r.feedUrl;
+  } catch (e) {}
+  return null;
+}
+export async function topPodcasts(lang) {
+  const cc = CC[lang] || 'US';
+  const key = 'c:' + cc;
+  const c = itCache.get(key);
+  if (c && Date.now() - c.at < 30 * 60 * 1000 && c.rows) return c.rows;
+  try {
+    const j = await itunes(cc + '/rss/toppodcasts/limit=12/json', key, 30 * 60 * 1000);
+    const entries = (j.feed && j.feed.entry) || [];
+    const out = [];
+    for (const e of entries) {
+      const id = e.id && e.id.attributes && e.id.attributes['im:id'];
+      const title = (e['im:name'] && e['im:name'].label) || '';
+      const author = (e['im:artist'] && e['im:artist'].label) || '';
+      const imgs = e['im:image'] || [];
+      const logo = imgs.length ? imgs[imgs.length - 1].label : null;
+      const feed = await resolveFeed(id, title, cc);
+      if (feed) out.push({ feedUrl: feed, title, author, description: '', logo });
+    }
+    if (out.length) { itCache.set(key, { at: Date.now(), rows: out }); return out; }
+  } catch (e) {}
+  return CURATED[lang] || CURATED.en;
+}
+export async function searchPodcasts(q, lang) {
+  const cc = CC[lang] || 'US';
+  let out = [];
+  try { out = await searchItunes(q, cc); } catch (e) {}
+  try {
+    const g = await gpodder(q);
+    for (const r of g) if (!out.some((o) => o.feedUrl === r.feedUrl || o.title === r.title)) out.push(r);
+  } catch (e) {}
+  return out.slice(0, 24);
 }

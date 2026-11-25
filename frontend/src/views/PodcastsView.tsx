@@ -20,7 +20,7 @@ export function PodcastsView({ lang, state }: Props) {
   useEffect(() => { if (state.token) api.podCurated(lang).then((r) => setCurated(r.results)).catch(() => {}) }, [lang, state.token, api])
   useEffect(() => {
     if (!state.token || !q.trim()) { setResults([]); return }
-    const t = window.setTimeout(() => { api.podSearch(q.trim()).then((r) => setResults(r.results)).catch(() => setResults([])) }, 300)
+    const t = window.setTimeout(() => { api.podSearch(q.trim(), lang).then((r) => setResults(r.results)).catch(() => setResults([])) }, 300)
     return () => window.clearTimeout(t)
   }, [q, state.token, api])
   if (!state.token) {

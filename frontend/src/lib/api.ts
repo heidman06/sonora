@@ -175,7 +175,7 @@ export class Api {
     }).catch(() => {})
   }
 
-  podSearch(q: string): Promise<{ results: PodDiscovery[] }> { return this.json(POD + '/search?q=' + encodeURIComponent(q)) }
+  podSearch(q: string, lang?: string): Promise<{ results: PodDiscovery[] }> { return this.json(POD + '/search?q=' + encodeURIComponent(q) + (lang ? '&lang=' + lang : '')) }
   podCurated(lang: string): Promise<{ results: PodDiscovery[] }> { return this.json(POD + '/curated?lang=' + lang) }
   podAddShow(feedUrl: string, itunesId?: string): Promise<{ show: PodcastShow; episodes: PodcastEpisode[] }> { return this.json(POD + '/shows', this.body(itunesId ? { feedUrl, itunesId } : { feedUrl })) }
   podShow(id: number, refresh = false): Promise<{ show: PodcastShow; stale: boolean; episodes: PodcastEpisode[] }> { return this.json(POD + '/shows/' + id + (refresh ? '?refresh=1' : '')) }

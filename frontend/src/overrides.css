@@ -515,3 +515,12 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .pod-show-head { gap: 12px; }
   .pod-show-art { width: 96px; height: 96px; border-radius: 12px; }
 }
+/* ===== Desktop: scrollbars fines partout (queue, sheets, panneau) ; mobile intact ===== */
+@media (min-width: 1000px) {
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--txt-2) 30%, transparent) transparent; }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--txt-2) 26%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+  *:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--txt-2) 55%, transparent); border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+}

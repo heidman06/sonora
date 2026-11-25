@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.8.1 - 2026-11-25
+- Scrollbars desktop fines et discrètes partout (file d'attente, sheets, panneau droit) : plus de barre native claire à droite ; révélées au survol
+- Découverte podcasts : iTunes Search par pays (FR/US/ES) avec feedUrl + fallback gpodder ; Sélection = top podcasts Apple par pays (les plus écoutés) avec vraies pochettes ; « jordi wild » (ES) trouve désormais The Wild Project
+
 ## v2.8.0 - 2026-11-25
 - Podcasts façon Spotify : découverte gpodder (sans clé) + sélection FR/EN/ES + import RSS manuel ; page show (pochette/description/suivre/refresh), nouveaux épisodes, reprise de progression per-compte, vitesse jusqu'à 2× sur les épisodes, sleep/download réutilisés ; audio épisodes proxy Range + cache séparé + URL signées HMAC ; garde anti-SSRF (https strict, IP privées/DNS pin, redirects re-gardés) ; gardes 'ep' serveur (likes/playlists/history/feedback) ; file séparée musique/épisodes ; mobile 3 onglets intact ; 89 tests serveur + 91 vitest verts
 
