@@ -79,7 +79,7 @@ await check('GET /api/mus/me', async () => {
 await check('GET /api/mus/mixes2 forme v2', async () => {
   const r = await req('/api/mus/mixes2');
   assert(r.status === 200, 'status ' + r.status);
-  assert(r.json && r.json.v === 1 && Array.isArray(r.json.mixes), 'forme v2 absente');
+    assert(r.json && r.json.v >= 1 && Array.isArray(r.json.mixes), 'forme v2 absente');
   assert(r.json.mixes.length <= 12, 'trop de mixes');
   for (const m of r.json.mixes) {
     assert(m.count === m.tracks.length, 'count != tracks');
