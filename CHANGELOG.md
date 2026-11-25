@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.0 - 2026-11-25
+- Desktop : les mixes passent en vraie grille (plus de carte tranchée ni de fondu), barre de défilement invisible au repos et révélée au survol, bande vide à droite supprimée quand aucun titre ne joue (la place du panneau n'est réservée que s'il existe), halo ambiant accent en haut d'accueil, rythme resserré, état actif de la sidebar teinté ; mobile inchangé
+
 ## v2.6.3 - 2026-11-25
 - Desktop : gouttière de 18px entre le contenu et la barre de défilement (la barre ne chevauche plus les cartes), fondu de 26px en bout des rangées horizontales, panneau droit repensé (pochette arrondie 20px, file scrollable indépendante, actions épinglées sous un filet), respiration basse de colonne ; mobile inchangé
 

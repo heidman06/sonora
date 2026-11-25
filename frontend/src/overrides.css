@@ -415,3 +415,37 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .np-queue { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin: 0 -8px; padding: 0 8px; scrollbar-width: thin; }
   .np-actions { margin-top: 0; padding-top: 12px; border-top: 1px solid var(--line); }
 }
+/* ===== Desktop visual overhaul v2.7 (>=1000px, append-only) ===== */
+@media (min-width: 1000px) {
+  /* scrollbar: invisible au repos, reveal au survol de la colonne */
+  .app .view::-webkit-scrollbar-thumb { background: transparent; border: 3px solid transparent; background-clip: content-box; }
+  .app .view:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--txt-2) 42%, transparent); border: 3px solid transparent; background-clip: content-box; }
+  .app .view::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--txt-2) 68%, transparent); border: 3px solid transparent; background-clip: content-box; }
+  /* plus de fondu qui bave sur les cartes */
+  .row-scroll { -webkit-mask-image: none; mask-image: none; }
+  /* les mixes deviennent une vraie grille : plus de carte tranchée */
+  .row-scroll:has(.mix-card) { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 22px 18px; overflow: visible; }
+  .row-scroll:has(.mix-card) .card { width: auto; }
+  .row-scroll:has(.mix-card) .card-art-wrap { width: auto; height: auto; }
+  /* profondeur ambiante en haut de l'accueil */
+  .home-hero { position: relative; }
+  .home-hero::before { content: ""; position: absolute; inset: -70px -90px auto -90px; height: 360px; background: radial-gradient(52% 68% at 22% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 72%); pointer-events: none; z-index: -1; }
+  /* rythme plus serré et régulier */
+  .section { margin-top: 34px; }
+  .section-title { font-size: 19px; letter-spacing: -.015em; }
+  .section-head { margin-bottom: 14px; }
+  .home-hero .h1 { font-size: 36px; }
+  .home-hero .sub { font-size: 13.5px; }
+  .card-art-wrap { border-radius: 16px; }
+  .card-title { font-size: 13.5px; }
+  .card-sub { font-size: 12px; }
+  /* sidebar : hiérarchie et état actif lisibles */
+  .side-link { font-size: 13.5px; padding: 10px 12px; border-radius: 10px; }
+  .side-link.on { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--txt); }
+  .side-playlist { padding: 7px 10px; border-radius: 10px; font-size: 12.5px; }
+  .side-label { font-size: 10.5px; letter-spacing: .12em; }
+}
+/* ===== Desktop: ne réserver la place du panneau que s'il existe (>=1500px) ===== */
+@media (min-width: 1500px) {
+  .app:not(:has(#np-panel)) { padding-right: 32px; }
+}
