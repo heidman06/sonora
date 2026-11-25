@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.2 - 2026-11-25
+- Logo aligné sur la marque retenue : squircle dégradé corail→magenta→violet avec waveform blanche (3 barres arrondies) ; favicon, icônes 180/192/512 et maskable régénérées, sources SVG à jour
+
 ## v2.5.1 - 2026-11-25
 - Nouveau logo/favicon : squircle sombre avec halo, disque dégradé rose→violet, anneau lumineux et bouton play blanc lisible dès 16 px ; icônes 180/192/512 + maskable régénérées, SVG source ajouté (frontend/public/icon.svg)
 
