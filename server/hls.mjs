@@ -5,7 +5,7 @@ import { dureesConnues } from './durees.mjs';
 import { join, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 
-const TS_CACHE_MAX = 1024 * 1024 * 1024;
+const TS_CACHE_MAX = Number(process.env.SONORA_TS_CACHE_MAX_BYTES || 2 * 1024 * 1024 * 1024);
 const enCours = new Map();
 let dernierElagage = 0;
 const VID = /^[A-Za-z0-9_-]{11}$/;

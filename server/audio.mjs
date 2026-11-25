@@ -82,8 +82,8 @@ function lancerTelechargement(id, dossier) {
   const dest = join(dossier, id + '.m4a');
   const part = dest + '.part';
   const url = 'https://www.youtube.com/watch?v=' + id;
-  const args = ['--cookies', config.cookies, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--no-warnings', '-o', part, url];
-  const complet = ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '-o', part, url]);
+  const args = ['--cookies', config.cookies, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--http-chunk-size', '10M', '--no-warnings', '-o', part, url];
+  const complet = ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--http-chunk-size', '10M', '-o', part, url]);
   const promesse = new Promise((res) => {
     const lancer = (a) => {
       const proc = spawn(config.ytdlp, a, { stdio: 'ignore' });
@@ -183,7 +183,7 @@ export async function handleAudio(req, res, path) {
 
   // progressive streaming: forward bytes while downloading
   const tmp = join(dossier, id + '.m4a.part');
-  const args = ['--cookies', config.cookies, '--js-runtimes', 'node:' + config.nodeBin, '--remote-components', config.ejs, '-f', '140/bestaudio[ext=m4a]', '--no-playlist'];
+  const args = ['--cookies', config.cookies, '--js-runtimes', 'node:' + config.nodeBin, '--remote-components', config.ejs, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--http-chunk-size', '10M'];
   const proc = spawn(config.ytdlp, args.concat(['-o', '-', 'https://www.youtube.com/watch?v=' + id]), { stdio: ['ignore', 'pipe', 'ignore'] });
   const disque = createWriteStream(tmp);
   let entete = false, octets = 0, coupe = false;

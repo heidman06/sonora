@@ -483,8 +483,8 @@ export class PlayerEngine {
       }).catch(() => {})
       this.patch({ current: queue[index] || queue[0], queue, duration: durs[index] || 0, currentTime: 0, hls: true, loadingTrack: '' })
       this.updatePositionState()
-      await this.playMedia()
       this.prefetchNext()
+      await this.playMedia()
       return true
     } catch {
       this.hls.active = false
