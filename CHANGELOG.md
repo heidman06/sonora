@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.5.8 - 2026-11-25
+- Mixes : MIXES_VERSION porté à 2 (serveur + client) pour invalider les caches contenant les anciennes coquilles vides ; les comptes froids reçoivent désormais 3 mixes remplis (18 titres, 4 pochettes) et les comptes chauds récupèrent leurs mixes réels avec images
+
 ## v2.5.7 - 2026-11-25
 - Hover des titres adouci (scale 1.06 au lieu de 1.5, z-index du bouton) : le bouton play/pause n'est plus recouvert
 - Mixes des comptes froids : 3 mixes remplis (18 titres + 4 pochettes chacun) depuis resolve_cache, au lieu de coquilles vides ; clic = lecture directe

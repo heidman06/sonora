@@ -2,7 +2,7 @@
 // Determinisme : tri stable + troncature AVANT tirage seedé (userId, seedJour UTC, mixKey).
 import { CATALOGUE, ARTIST_MAP, POOL_NEUTRE, composerMoods, toucherMoods, normaliser, normaliserArtiste } from './musique-moods.mjs';
 
-export const MIXES_VERSION = 1;
+export const MIXES_VERSION = 2;
 export const COQUILLES = ['moodNew', 'moodChill', 'moodPhonk'];
 
 function hashGraine(s) {

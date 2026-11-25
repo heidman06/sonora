@@ -5,7 +5,7 @@ import { storage, userKey } from './storage'
 import { tr } from './i18n'
 import { CATALOGUE } from './moods'
 
-export const MIXES_VERSION = 1
+export const MIXES_VERSION = 2
 
 const SEED_KEYS: Record<string, string> = { favorites: 'seedFavorites', history: 'seedHistory', playlists: 'seedPlaylists', rotation: 'seedRotation', bulk: 'seedBulk' }
 
