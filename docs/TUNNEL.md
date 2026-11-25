@@ -38,6 +38,20 @@ On Tailscale 1.104, `tailscale funnel reset` resets **both** funnel and tailnet 
 
 Port map currently replayed (public → local): 443→3010, 8448→9090 (https+insecure), 8449→3010, 8450→61208, 8451→3011, 8452→8085, 8454→8092, 8455→43211, 8460→8088, 8461→3001, 8462→8222, 8464→8099, 8465→8091, 8466→5678, 8467→9095, 8468→3099, 8471→2586, 8473→9120, 8474→8483, 8476→5007, 8479→8080.
 
+
+## Hardened public entry point (v2.5.0+)
+
+The funnel targets the gateway (127.0.0.1:3012), never the hub directly:
+
+    sudo tailscale funnel --bg --https=8443 http://127.0.0.1:3012
+
+The gateway (server/public-gateway.mjs, systemd sonora-public.service) allowlists Sonora paths only, rate-limits per IP, and returns 404 for every other hub path (/libros, /mavie, dashboards...).
+
+Consequences for this host:
+
+- Dashboard moved to tailnet only: https://<node>.<tailnet>.ts.net:8449/ (the old public https://<node>/ on 443 has been removed from serve).
+- Public Sonora: https://<node>.<tailnet>.ts.net:8443/musique/.
+- Sign-up requires the invitation code (SONORA_SIGNUP_CODE set in the systemd drop-in of the hub).
 ## Notes and limits
 
 - The hostname is the machine's Tailscale node name; Tailscale cannot give per-app subdomains on `ts.net`. For a pretty dedicated domain, use a Cloudflare named tunnel in front of the same hub (requires a domain on Cloudflare).

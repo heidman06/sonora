@@ -1,0 +1,16 @@
+[Unit]
+Description=Sonora public gateway (Sonora-only allowlist + rate limit)
+After=network-online.target sonora.service
+Wants=sonora.service
+
+[Service]
+Type=simple
+User=sonora
+Environment=GATEWAY_PORT=3012
+Environment=GATEWAY_TARGET=http://127.0.0.1:3011
+ExecStart=/usr/bin/node /opt/sonora/public-gateway.mjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

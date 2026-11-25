@@ -753,6 +753,9 @@ export function handleMusique(req, res, path, url) {
       }
       if (route === '/register' && req.method === 'POST') {
         const b = await corps(req);
+        if (process.env.SONORA_SIGNUP === 'closed') return json(403, { error: 'inscriptions fermees' });
+        const signupCode = process.env.SONORA_SIGNUP_CODE || '';
+        if (signupCode && String(b.code || '') !== signupCode) return json(403, { error: 'code invitation requis' });
         const nom = String(b.username || '').trim().toLowerCase();
         const mdp = String(b.password || '');
         if (!/^[a-z0-9._-]{3,24}$/.test(nom)) return json(400, { error: 'nom invalide (3-24, a-z 0-9 . _ -)' });
@@ -1039,4 +1042,6 @@ export function handleMusique(req, res, path, url) {
 }
 
 // Export reserved for unit tests (pure functions).
+export function utilisateurDuToken(req) { return userDuToken(req) }
+
 export const internals = { melanger, uniques, FILTRE_MIXTE, RECOS_VERSION, moodsCache, purgeMixes, ecrireWarm, composerMixes, get ytActifs() { return ytActifs; }, get warmLances() { return warmLances; }, get compteSqlMixes() { return compteSqlMixes; }, get mixEpoch() { return mixEpoch; } };

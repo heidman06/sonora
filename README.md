@@ -28,7 +28,7 @@ Self-hosted music PWA with an Apple Music / Spotify feel: Mix radio, personalize
 - **Offline downloads**: IndexedDB blob storage, playback without network
 - **Real durations** for playlists, likes, history and Subsonic
 - **Multi-account**: scrypt passwords, bearer sessions, per-account isolation
-- **Security**: 30-day session TTL, server-side logout revocation, input validation
+- **Security**: 30-day session TTL, server-side logout revocation, input validation; public exposure goes through a Sonora-only allowlist gateway with per-IP rate limits, invite-only sign-up and a session-gated search proxy (see docs/SECURITY-PUBLIC.md)
 - **Mobile-first PWA**: English (default), French and Spanish UI, light/dark theme
 - **iOS background playback**: native HLS queue so tracks keep advancing when the PWA is backgrounded or the screen is locked
 

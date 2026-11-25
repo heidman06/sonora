@@ -6,7 +6,7 @@ import http from 'node:http';
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname, extname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { handleMusique } from './musique.mjs';
+import { handleMusique, utilisateurDuToken } from './musique.mjs';
 import { handleAudio } from './audio.mjs';
 import { handleSubsonic } from './subsonic.mjs';
 import { handleHls } from './hls.mjs';
@@ -59,6 +59,10 @@ async function proxyPiped(req, res, path, search) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Referrer-Policy', 'no-referrer')
+    res.setHeader('X-Frame-Options', 'DENY')
+    if (String(req.headers['x-forwarded-proto'] || '') === 'https') res.setHeader('Strict-Transport-Security', 'max-age=31536000')
     let url;
     try { url = new URL(req.url, 'http://localhost'); } catch (e) { res.writeHead(400).end('bad request'); return; }
     const path = url.pathname;
@@ -72,7 +76,10 @@ const server = http.createServer(async (req, res) => {
     if (path.startsWith('/musique/hls/')) { await handleHls(req, res, path, url, { port: PORT, dataDir: process.env.SONORA_DATA || join(__dirname, '..', 'data'), ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg' }); return; }
     if (path.startsWith('/subsonic/rest')) { await handleSubsonic(req, res, path, url); return; }
     if (await handleAudio(req, res, path)) return;
-    if (path.startsWith('/api/piped/')) { await proxyPiped(req, res, path.slice('/api/piped'.length), url.search); return; }
+    if (path.startsWith('/api/piped/')) {
+      if (!utilisateurDuToken(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }).end('{"error":"token"}'); return; }
+      await proxyPiped(req, res, path.slice('/api/piped'.length), url.search); return;
+    }
 
     if (path === '/musique-next') { res.writeHead(302, { Location: '/musique/' }).end(); return; }
     if (path === '/musique-next/' || path.startsWith('/musique-next/')) { res.writeHead(302, { Location: path.replace('/musique-next', '/musique') }).end(); return; }

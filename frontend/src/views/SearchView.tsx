@@ -59,7 +59,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   useEffect(() => {
     setSuggestions([])
     suggestOpen.current = false
-    if (!query.trim()) { setItems([]); setTracks([]); return }
+    if (!query.trim() || !state.token) { setItems([]); setTracks([]); setLoading(false); return }
     let alive = true
     setLoading(true)
     setError(false)
@@ -76,6 +76,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   const submit = (value: string) => {
     const q = value.trim()
     if (!q) return
+    if (!state.token) { navigate('#/library'); return }
     if (timer.current) window.clearTimeout(timer.current)
     suggestOpen.current = false
     setSuggestions([])
@@ -106,6 +107,16 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
       setTracks((prev) => [...prev, ...more])
       setNextpage(data.nextpage || '')
     }).catch(() => {})
+  }
+
+  if (!state.token) {
+    return (
+      <>
+        <h1 className="h1">{tr(lang, 'searchTitle')}</h1>
+        <p className="sub">{tr(lang, 'searchSubtitle')}</p>
+        <EmptyState lang={lang} icon="search" titleKey="searchGuestTitle" hintKey="searchGuestHint" action={{ labelKey: 'signIn', onClick: () => navigate('#/library') }} />
+      </>
+    )
   }
 
   return (

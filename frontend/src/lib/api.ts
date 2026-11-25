@@ -211,15 +211,15 @@ export class Api {
   search(q: string, filter = 'music_songs', nextpage = ''): Promise<SearchResponse> {
     let url = PIPED + '/search?q=' + encodeURIComponent(q) + '&filter=' + encodeURIComponent(filter)
     if (nextpage) url += '&nextpage=' + encodeURIComponent(nextpage)
-    return this.json<SearchResponse>(url, {}, false)
+    return this.json<SearchResponse>(url)
   }
 
   suggestions(q: string): Promise<string[]> {
-    return this.json<string[]>(PIPED + '/suggestions?query=' + encodeURIComponent(q), {}, false).catch(() => [])
+    return this.json<string[]>(PIPED + '/suggestions?query=' + encodeURIComponent(q)).catch(() => [])
   }
 
   channel(id: string): Promise<PipedPlaylist & { description?: string; avatarUrl?: string }> {
-    return this.json(PIPED + '/channel/' + encodeURIComponent(id), {}, false)
+    return this.json(PIPED + '/channel/' + encodeURIComponent(id))
   }
 }
 

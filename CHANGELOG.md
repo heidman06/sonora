@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.5.0 - 2026-11-25
+- Securite de l'exposition publique : passerelle dediee Sonora-only (allowlist, 404 hors Sonora, rate-limit par IP), inscription fermee par code d'invitation (SONORA_SIGNUP_CODE), /api/piped reserve aux sessions, en-tetes de securite, dashboard retire du 443 public (tailnet :8449)
+- Recherche : CTA « Connecte-toi pour chercher » pour les invites
+- Docs : SECURITY-PUBLIC.md + TUNNEL.md (gateway 3012, dashboard 8449, restauration serve)
+
 ## v2.4.7 - 2026-11-25
 - Accueil invité : plus de fausses cartes de mix (coquilles à pochettes vides qui ressemblaient à un chargement infini) — une carte « Connecte-toi pour tes mixes » avec bouton Sign in ; les comptes froids gardent leurs mixes de secours avec une tuile typée au lieu de cases grises
 
