@@ -127,6 +127,7 @@ Full guide: [docs/CARPLAY.md](docs/CARPLAY.md).
 - [Roadmap](docs/ROADMAP.md)
 - [Design notes: scale & playlists](docs/DESIGN-echelle-playlists.md), [signature features](docs/DESIGN-features-signature.md), [visual refresh](docs/DESIGN-refonte-visuelle.md), [personalized moods](docs/DESIGN-moods-personnalises.md), [personalized mixes](docs/DESIGN-mixes-personnalises.md)
 - [Known limitations](docs/LIMITATIONS.md)
+- [Public exposure via Tailscale Funnel](docs/TUNNEL.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security](SECURITY.md)
 - [Changelog](CHANGELOG.md)
