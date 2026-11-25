@@ -313,3 +313,54 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .track:hover .track-art { position: relative; z-index: 2; transform: scale(1.06); transform-origin: left center; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
 }
 
+/* ===== Desktop visual layer v2 (append-only, >=1000px) ===== */
+@media (min-width: 1000px) {
+  .top.scrolled #headings { display: block; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .grid .card { width: auto; }
+  .grid .card-art-wrap { width: auto; height: auto; }
+  .searchbar { max-width: 640px; }
+  .pl-empty { padding: 64px 0; }
+  .card-art { transition: transform .18s var(--ease); }
+  [data-theme="light"] .dp-icon:hover, [data-theme="light"] .dp-btn:hover,
+  [data-theme="light"] .side-link:hover, [data-theme="light"] .side-playlist:hover { background: var(--surface-2); color: var(--txt); }
+  [data-theme="light"] .dp-icon.on { background: var(--surface-2); }
+  .icon-btn:focus-visible, .dp-icon:focus-visible, .dp-btn:focus-visible, .dp-play:focus-visible,
+  .back-btn:focus-visible, .ctl:focus-visible, .foot-btn:focus-visible, .vol-ico:focus-visible { border-radius: 50%; }
+  .card:focus-visible { border-radius: 20px; }
+  .track:focus-visible { border-radius: 18px; }
+  .tlike:focus-visible, .tmenu:focus-visible, .tremove:focus-visible, .side-link:focus-visible { border-radius: 12px; }
+  .pl-card:focus-visible { border-radius: 22px; }
+}
+@media (min-width: 1000px) and (max-width: 1499.98px) {
+  .dp-track { flex: 0 1 250px; min-width: 0; }
+  .dp-center { min-width: 232px; }
+  .dp-tools { width: auto; }
+}
+@media (min-width: 1000px) and (max-width: 1199.98px) {
+  .dp-vol { display: none; }
+}
+@media (min-width: 1000px) and (prefers-reduced-motion: reduce) {
+  .card:hover, .card:active .card-art, .track:active { transform: none; }
+}
+/* ===== Desktop editorial layer (>=1000px) ===== */
+@media (min-width: 1000px) {
+  .app .view { max-width: 1040px; margin-inline: auto; }
+  .home-hero { padding-top: 6px; }
+  .home-hero .h1 { font-size: 40px; line-height: 1.08; letter-spacing: -.03em; }
+  .home-hero .sub { margin-top: 6px; }
+  .eyebrow { letter-spacing: .16em; font-size: 11px; }
+  .section { margin-top: 42px; }
+  .section-title { font-size: 20px; font-weight: 750; letter-spacing: -.015em; }
+  .section-head { margin-bottom: 14px; }
+  .chip { padding: 7px 14px; font-size: 13px; }
+  .row-scroll { gap: 18px; }
+  .card { width: 184px; }
+  .track { padding: 8px 12px; border-radius: 12px; }
+  .track:hover { background: var(--surface); }
+  .track-art { width: 44px; height: 44px; border-radius: 10px; }
+  .track-title { font-size: 14px; }
+  .track-sub { font-size: 12.5px; }
+  .searchbar { max-width: 640px; }
+  .searchbar input { height: 48px; border-radius: 14px; }
+}

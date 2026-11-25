@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.6.0 - 2026-11-25
+- Desktop : couche visuelle append-only (>=1000px) — contenu centré à 1040px, H1 40px, chips et titres resserrés, cartes 184px, lignes de pistes plus denses, recherche 640px, en-têtes conservés au scroll, hovers thème clair via tokens, rayons de focus corrects, reduced-motion respecté ; mobile <=999px strictement inchangé
+
 ## v2.5.8 - 2026-11-25
 - Mixes : MIXES_VERSION porté à 2 (serveur + client) pour invalider les caches contenant les anciennes coquilles vides ; les comptes froids reçoivent désormais 3 mixes remplis (18 titres, 4 pochettes) et les comptes chauds récupèrent leurs mixes réels avec images
 
