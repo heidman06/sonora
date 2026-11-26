@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.5 - 2026-11-26
+- Paroles : l'auto-scroll est confiné au conteneur de paroles (scrollTop interne) au lieu de scrollIntoView qui faisait monter la page/sheet à l'infini ; hauteur bornée (46vh) + pleine largeur dans la grille desktop → la vue ne casse plus ; la ligne active reste centrée, tap = seek
+
 ## v2.8.4 - 2026-11-25
 - Recherche desktop : scope « Podcasts » intégré au segmented (5e onglet) avec résultats inline (top pays par défaut, recherche par pays) ; chip orpheline masquée sur desktop ; segmented compact inline ; empty-state resserré ; mobile inchangé (chip conservée, 3 onglets)
 

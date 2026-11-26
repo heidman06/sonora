@@ -21,6 +21,7 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const boxRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -42,10 +43,15 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   }
 
   useEffect(() => {
-    if (active >= 0) rowRefs.current[active]?.scrollIntoView({ block: 'nearest' })
+    // Scroll confiné au conteneur de paroles : scrollIntoView scrollerait aussi la page/sheet (vue cassée).
+    const box = boxRef.current
+    const row = active >= 0 ? rowRefs.current[active] : null
+    if (!box || !row) return
+    const target = row.offsetTop - box.clientHeight / 2 + row.clientHeight / 2
+    box.scrollTo({ top: Math.max(0, target), behavior: 'auto' })
   }, [active])
 
-  const wrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', flex: 1, minHeight: 0, position: 'relative', zIndex: 3 }
+  const wrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', width: '100%', flex: 1, minHeight: 0, maxHeight: '46vh', position: 'relative', zIndex: 3 }
 
   if (status === 'loading') return <div className="empty" style={wrap}>{tr(lang, 'loading')}</div>
   if (status === 'error') {
@@ -54,7 +60,7 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   if (record?.instrumental) return <EmptyState lang={lang} icon="note" titleKey="lyricsInstrumental" hintKey="lyricsHint" />
   if (lines.length) {
     return (
-      <div style={{ ...wrap, overflow: 'auto' }}>
+      <div ref={boxRef} style={{ ...wrap, overflow: 'auto' }}>
         {lines.map((line, i) => (
           <button
             key={i} type="button"

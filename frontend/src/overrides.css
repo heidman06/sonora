@@ -533,3 +533,5 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   #filters button { flex: none; padding: 9px 18px; }
   #results .empty-illu, #results .empty { padding: 28px 16px; }
 }
+/* ===== Paroles : panneau pleine largeur + hauteur bornée (scroll interne, pas la sheet) ===== */
+#player .player-panels { grid-column: 1 / -1; width: 100%; min-height: 0; }
