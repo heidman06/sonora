@@ -538,3 +538,5 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 /* ===== Paroles/sheet : pas de scroll horizontal intempestif ===== */
 #player.sheet { overflow-x: hidden; }
 .player-panels > div { overflow-x: hidden; }
+/* ===== Paroles : séparation du panneau + reveal à l'ouverture ===== */
+.player-panels { margin-top: 12px; }

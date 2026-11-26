@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.7 - 2026-11-26
+- Paroles mobile : à l'ouverture du panneau, la sheet se cale une fois dessus (reveal) pour que les paroles soient visibles sans chercher ; ensuite l'auto-scroll reste confiné au panneau ; marge de séparation sous les actions
+
 ## v2.8.6 - 2026-11-26
 - Sheet player / panneau paroles : scroll horizontal masqué (plus de barre horizontale intempestive en bas de la sheet)
 

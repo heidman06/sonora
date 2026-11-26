@@ -50,6 +50,13 @@ export function PlayerSheet(props: Props) {
   const volume = usePlayerSelector((s) => s.volume)
   const [drag, setDrag] = useState<number | null>(null)
   const [showLyrics, setShowLyrics] = useState(false)
+  useEffect(() => {
+    if (!showLyrics) return
+    const t = window.setTimeout(() => {
+      document.querySelector('#player .player-panels')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }, 60)
+    return () => window.clearTimeout(t)
+  }, [showLyrics])
   const [showSleep, setShowSleep] = useState(false)
   const [showRate, setShowRate] = useState(false)
   const [hoverSeek, setHoverSeek] = useState(false)
