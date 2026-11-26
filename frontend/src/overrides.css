@@ -540,3 +540,6 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 .player-panels > div { overflow-x: hidden; }
 /* ===== Paroles : séparation du panneau + reveal à l'ouverture ===== */
 .player-panels { margin-top: 12px; }
+/* ===== Sheet player scrollable (mobile était overflow:hidden -> contenu clipé, scroll impossible) ===== */
+#player.sheet { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.player-panels > div { overscroll-behavior: contain; touch-action: pan-y; }

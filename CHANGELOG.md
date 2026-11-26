@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.9 - 2026-11-26
+- Scroll mobile réparé dans la vue player/paroles : la sheet était overflow:hidden (contenu clipé, aucun scroll possible) → overflow-y:auto + touch-action pan-y + overscroll contain sur le panneau paroles ; la sheet et les paroles défilent maintenant au doigt/molette
+
 ## v2.8.8 - 2026-11-26
 - Paroles : reveal fiable à l'ouverture (scrollTop calculé sur la sheet) — mobile et desktop ; la sheet se cale une fois sur le panneau puis reste stable pendant l'auto-scroll confiné
 
