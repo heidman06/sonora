@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.9.0 - 2026-11-26
+- Vue player : le scroll passe sur .player (interne) ; la sheet (fond artwork flouté + vignette) ne scrolle plus → suppression de la couture horizontale / bande de couleur différente en bas ; fond ambiant uniforme ; file d'attente en flux sous les paroles ; scroll tactile/molette opérationnel
+
 ## v2.8.9 - 2026-11-26
 - Scroll mobile réparé dans la vue player/paroles : la sheet était overflow:hidden (contenu clipé, aucun scroll possible) → overflow-y:auto + touch-action pan-y + overscroll contain sur le panneau paroles ; la sheet et les paroles défilent maintenant au doigt/molette
 

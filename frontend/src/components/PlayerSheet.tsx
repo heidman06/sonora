@@ -53,7 +53,7 @@ export function PlayerSheet(props: Props) {
   useEffect(() => {
     if (!showLyrics) return
     const t = window.setTimeout(() => {
-      const sheet = document.querySelector('#player')
+      const sheet = document.querySelector('#player .player')
       const panel = document.querySelector('#player .player-panels')
       if (!sheet || !panel) return
       const target = panel.getBoundingClientRect().top - sheet.getBoundingClientRect().top + sheet.scrollTop - 16

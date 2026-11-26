@@ -543,3 +543,9 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 /* ===== Sheet player scrollable (mobile était overflow:hidden -> contenu clipé, scroll impossible) ===== */
 #player.sheet { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 .player-panels > div { overscroll-behavior: contain; touch-action: pan-y; }
+
+/* ===== Scroll interne sur .player : la sheet (fond artwork + vignette) ne scrolle plus -> plus de couture ===== */
+#player.sheet { overflow: hidden; }
+#player .player { overflow-y: auto; min-height: 0; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#player .player-foot { position: relative; z-index: 4; margin-top: 12px; }
+
