@@ -53,7 +53,11 @@ export function PlayerSheet(props: Props) {
   useEffect(() => {
     if (!showLyrics) return
     const t = window.setTimeout(() => {
-      document.querySelector('#player .player-panels')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      const sheet = document.querySelector('#player')
+      const panel = document.querySelector('#player .player-panels')
+      if (!sheet || !panel) return
+      const target = panel.getBoundingClientRect().top - sheet.getBoundingClientRect().top + sheet.scrollTop - 16
+      sheet.scrollTo({ top: Math.max(0, target), behavior: 'smooth' })
     }, 60)
     return () => window.clearTimeout(t)
   }, [showLyrics])

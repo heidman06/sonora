@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.8 - 2026-11-26
+- Paroles : reveal fiable à l'ouverture (scrollTop calculé sur la sheet) — mobile et desktop ; la sheet se cale une fois sur le panneau puis reste stable pendant l'auto-scroll confiné
+
 ## v2.8.7 - 2026-11-26
 - Paroles mobile : à l'ouverture du panneau, la sheet se cale une fois dessus (reveal) pour que les paroles soient visibles sans chercher ; ensuite l'auto-scroll reste confiné au panneau ; marge de séparation sous les actions
 
