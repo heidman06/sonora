@@ -535,3 +535,6 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 }
 /* ===== Paroles : panneau pleine largeur + hauteur bornée (scroll interne, pas la sheet) ===== */
 #player .player-panels { grid-column: 1 / -1; width: 100%; min-height: 0; }
+/* ===== Paroles/sheet : pas de scroll horizontal intempestif ===== */
+#player.sheet { overflow-x: hidden; }
+.player-panels > div { overflow-x: hidden; }

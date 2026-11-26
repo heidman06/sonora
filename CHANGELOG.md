@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.8.6 - 2026-11-26
+- Sheet player / panneau paroles : scroll horizontal masqué (plus de barre horizontale intempestive en bas de la sheet)
+
 ## v2.8.5 - 2026-11-26
 - Paroles : l'auto-scroll est confiné au conteneur de paroles (scrollTop interne) au lieu de scrollIntoView qui faisait monter la page/sheet à l'infini ; hauteur bornée (46vh) + pleine largeur dans la grille desktop → la vue ne casse plus ; la ligne active reste centrée, tap = seek
 
