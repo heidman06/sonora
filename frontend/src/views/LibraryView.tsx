@@ -11,6 +11,7 @@ import { EmptyState } from '../components/EmptyState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ApiError } from '../lib/api'
 import { engine } from '../audio/engine'
+import { useInstallPrompt } from '../lib/install'
 import { resetApp } from '../lib/sw'
 
 interface Props {
@@ -39,10 +40,21 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
   const [creating, setCreating] = useState(false)
   const [confirmDel, setConfirmDel] = useState<{ id: number; name: string } | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [shareUrl, setShareUrl] = useState('')
+  const { canInstall, promptInstall } = useInstallPrompt()
 
   useEffect(() => {
     if (state.token) void engine.refreshLibrary()
   }, [state.token])
+  useEffect(() => {
+    try {
+      const u = sessionStorage.getItem('sonora.shareUrl')
+      if (!u) return
+      sessionStorage.removeItem('sonora.shareUrl')
+      setShareUrl(u)
+      setImportOpen(true)
+    } catch (e) { /* noop */ }
+  }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -197,6 +209,9 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
           removable menu={!!onMenu} onMenu={onMenu} onRemove={(t) => void engine.removeDownload(t.id)} emptyKey="noDownloads" />
       </section>
 
+      {canInstall && (
+        <div className="setting-row"><b>{tr(lang, 'installApp')}</b><button className="section-link" onClick={() => void promptInstall()}>{tr(lang, 'installApp')}</button></div>
+      )}
       <div className="setting-row"><b>{tr(lang, 'version')}</b><span style={{ opacity: 0.65, fontSize: 13 }}>{__APP_VERSION__} · React</span></div>
       {languageRow}
       <div className="setting-row">
@@ -214,12 +229,12 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
         <ConfirmDialog title={tr(lang, 'delete') + ' « ' + confirmDel.name + ' » ?'} confirmLabel={tr(lang, 'delete')} cancelLabel={tr(lang, 'cancel')}
           onConfirm={() => { onDeletePlaylist(confirmDel.id); setConfirmDel(null) }} onCancel={() => setConfirmDel(null)} />
       )}
-      {importOpen && <ImportSheetLazy lang={lang} onClose={() => setImportOpen(false)} onImported={() => { setImportOpen(false); void engine.loadPlaylists() }} />}
+      {importOpen && <ImportSheetLazy lang={lang} initialUrl={shareUrl} onClose={() => { setImportOpen(false); setShareUrl('') }} onImported={() => { setImportOpen(false); void engine.loadPlaylists() }} />}
     </>
   )
 }
 
-function ImportSheetLazy(props: { lang: Lang; onClose(): void; onImported(): void }) {
+function ImportSheetLazy(props: { lang: Lang; initialUrl?: string; onClose(): void; onImported(): void }) {
   const [Mod, setMod] = useState<null | React.ComponentType<typeof props>>(null)
   useEffect(() => { void import('../components/ImportSheet').then((m) => setMod(() => m.ImportSheet)) }, [])
   if (!Mod) return null

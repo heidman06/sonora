@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { engine } from './audio/engine'
 import { usePlayerSelector, selectUiState } from './audio/usePlayer'
 import { shallowEqual } from './lib/selector'
-import { useHashRoute, useDynamicAmbient, useMediaQuery } from './lib/hooks'
+import { useHashRoute, useDynamicAmbient, useMediaQuery, navigate } from './lib/hooks'
 import { nextLang, langLabel, tr } from './lib/i18n'
 import type { Lang, Track } from './lib/types'
 import { storage } from './lib/storage'
@@ -31,6 +31,21 @@ import { UpdateBanner } from './components/UpdateBanner'
 import { applyUpdate } from './lib/sw'
 
 export default function App() {
+  // Partage PWA (share_target) : on récupère un lien Spotify/Apple/YouTube partagé vers Sonora.
+  useEffect(() => {
+    const raw = new URLSearchParams(location.search).get('share')
+    if (!raw) return
+    let url = ''
+    try {
+      const j = JSON.parse(raw)
+      url = String(j.url || '')
+      if (!url && j.text) { const m = /https?:\/\/\S+/.exec(String(j.text)); if (m) url = m[0] }
+    } catch (e) { url = raw }
+    try { history.replaceState(null, '', location.pathname + (location.hash || '')) } catch (e) { /* noop */ }
+    if (!/^https?:\/\//.test(url)) return
+    try { sessionStorage.setItem('sonora.shareUrl', url) } catch (e) { /* noop */ }
+    navigate('#/library')
+  }, [])
   const state = usePlayerSelector(selectUiState, shallowEqual)
   const route = useHashRoute()
   const [playerOpen, setPlayerOpen] = useState(false)

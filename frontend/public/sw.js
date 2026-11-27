@@ -118,6 +118,13 @@ self.addEventListener('fetch', (event) => {
   let url
   try { url = new URL(req.url) } catch (e) { return }
   if (url.origin !== self.location.origin) return
+  if (url.pathname === SCOPE + 'share') {
+    const params = url.searchParams
+    const cible = new URL(SCOPE, self.location.origin)
+    cible.searchParams.set('share', JSON.stringify({ title: params.get('title') || '', text: params.get('text') || '', url: params.get('url') || '' }))
+    event.respondWith(Response.redirect(cible.href, 303))
+    return
+  }
   if (req.mode === 'navigate') {
     event.respondWith(networkFirst(req))
     return

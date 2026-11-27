@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Lang } from '../lib/types'
 import { tr } from '../lib/i18n'
 import { engine } from '../audio/engine'
@@ -6,6 +6,7 @@ import { Icon } from './Icon'
 
 interface Props {
   lang: Lang
+  initialUrl?: string
   onClose: () => void
   onImported: () => void
 }
@@ -15,9 +16,9 @@ type Preview = { source: string; name: string; truncated: boolean; tracks: Previ
 
 const SOURCE_LABEL: Record<string, string> = { spotify: 'Spotify', apple: 'Apple Music', deezer: 'Deezer', youtube: 'YouTube', csv: 'CSV' }
 
-export function ImportSheet({ lang, onClose, onImported }: Props) {
+export function ImportSheet({ lang, initialUrl, onClose, onImported }: Props) {
   const [mode, setMode] = useState<'url' | 'csv'>('url')
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(initialUrl || '')
   const [csv, setCsv] = useState('')
   const [preview, setPreview] = useState<Preview | null>(null)
   const [busy, setBusy] = useState(false)
@@ -47,6 +48,13 @@ export function ImportSheet({ lang, onClose, onImported }: Props) {
       onImported()
     } catch { setError(tr(lang, 'error')) } finally { setBusy(false) }
   }
+
+  const auto = useRef(false)
+  useEffect(() => {
+    if (!initialUrl || auto.current) return
+    auto.current = true
+    void fetchPreview()
+  }, [initialUrl])
 
   const resume = preview ? preview.tracks.slice(0, 6) : []
 

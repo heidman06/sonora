@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.18.0 - 2026-11-27
+- PWA **share-target** : partager un lien Spotify/Apple/YouTube vers Sonara ouvre l'import prérempli avec aperçu automatique (SW `/musique/share` → `?share=` → `#/library` → feuille Import). Testé de bout en bout.
+- **Invite d'installation** : bouton « Installer l'application » dans Bibliothèque quand `beforeinstallprompt` est disponible (PWA standalone).
+- Toast de mise à jour : déjà en place (UpdateBanner + SKIP_WAITING), inchangé.
+
 ## v2.17.0 - 2026-11-27
 - Import v2 : une seule feuille avec onglets **Lien** / **CSV**. Détection automatique YouTube, Spotify (embed), Apple Music (page), Deezer (API publique) + export CSV. Aperçu (source, nb de titres, liste) puis import en une action.
 - API : `POST /api/mus/import/preview` et `/import/apply` (YouTube → piste directe ; Spotify/Apple/Deezer/CSV → playlist + résolution via `pending`). Fetch serveur limité aux hôtes connus, 4 Mo max, 15 s.
