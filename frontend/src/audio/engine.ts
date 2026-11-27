@@ -5,6 +5,7 @@ import { tr } from '../lib/i18n'
 import { installSleep, type SleepMode } from './sleep'
 import { installCrossfade } from './crossfade'
 import { attachEpisodeProgress } from './episodeProgress'
+import { hlsPlan } from './hlsPlan'
 import type { Account, AuthResponse, DownloadRecord, Lang, PlaylistSummary, Track } from '../lib/types'
 
 export const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
@@ -477,8 +478,11 @@ export class PlayerEngine {
     if (this.state.queue.some((t) => t.kind === 'episode')) return false
     if (Date.now() < this.hls.cooldownUntil) return false
     try {
-      const queue = this.state.queue.slice(0, 60).filter((t) => t.id)
-      if (queue.length < 2) return false
+      const filtree = this.state.queue.filter((t) => t.id)
+      if (filtree.length < 2) return false
+      const plan = hlsPlan(filtree, index)
+      const queue = plan.queue
+      index = plan.index
       const durs: number[] = []
       const offsets: number[] = []
       let acc = 0
@@ -555,6 +559,14 @@ export class PlayerEngine {
       const queue = this.hls.queue
       const idx = this.hls.queue.findIndex((t) => t.id === this.state.current?.id)
       const rel = this.media.currentTime - (this.hls.offsets[idx] || 0)
+      if (idx <= 0 && rel <= 4) {
+        // Fenêtre HLS démarrée au titre choisi : « précédent » doit sortir de la fenêtre.
+        const full = this.state.queue
+        const fi = Math.max(0, full.findIndex((t) => t.id === this.state.current?.id))
+        const cible = fi <= 0 ? full.length - 1 : fi - 1
+        void this.playTrack(full[cible], full, cible)
+        return
+      }
       const target = rel > 4 ? idx : (idx <= 0 ? queue.length - 1 : idx - 1)
       this.media.currentTime = this.hls.offsets[target] || 0
       this.patch({ current: queue[target], currentTime: 0 })
