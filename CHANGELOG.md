@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.15.2 - 2026-11-27
+- Recherche mobile : le chip « Podcasts » n'est plus collé au sous-titre (marge 16 px au-dessus, 14 px en dessous) ; desktop inchangé (chip masqué ≥1000 px).
+
 ## v2.15.1 - 2026-11-27
 - CI : suppression effective du harnais `tests/stream-fast-e2e.test.mjs` (chemin proxy sidecar retiré) qui faisait échouer le job « Unit and API tests » sur GitHub.
 

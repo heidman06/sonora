@@ -494,7 +494,7 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   .app .top .icon-btn { width: 36px; height: 36px; border-radius: 10px; }
 }
 /* ===== Podcasts (classes neuves uniquement ; mobile <=699px intact) ===== */
-.pod-search-entry { margin: 0 0 10px; }
+.pod-search-entry { margin: 16px 0 14px; }
 .pod-list { display: flex; flex-direction: column; gap: 6px; }
 .pod-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 12px; background: transparent; color: inherit; cursor: pointer; }
 .pod-row:hover { background: var(--surface); }
