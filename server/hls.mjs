@@ -69,7 +69,7 @@ function genererSilence(id, d, ffmpeg, duree) {
   const dest = join(d, id + '.silence.ts');
   if (existsSync(dest)) {
     const st = statSync(dest);
-    if (st.size > 1000 && Date.now() - st.mtimeMs < 10 * 60 * 1000) return Promise.resolve(dest);
+    if (st.size > 1000 && Date.now() - st.mtimeMs < 60 * 1000) return Promise.resolve(dest);
     try { unlinkSync(dest); } catch (e) {}
   }
   const tmp = dest + '.part';
@@ -147,11 +147,18 @@ export async function handleHls(req, res, path, url, opts) {
       const f = await genererTs(id, d, port, ffmpeg);
       servirFichier(req, res, f);
     } catch (e) {
+      // L'audio peut être encore en cours de téléchargement : on retente une fois avant de silencer.
       try {
-        const f = await genererSilence(id, d, ffmpeg, duree);
+        await new Promise((r) => setTimeout(r, 3000));
+        const f = await genererTs(id, d, port, ffmpeg);
         servirFichier(req, res, f);
-      } catch (e2) {
-        res.writeHead(502, { 'Content-Type': 'text/plain' }).end('segment indisponible');
+      } catch (e1) {
+        try {
+          const f = await genererSilence(id, d, ffmpeg, duree);
+          servirFichier(req, res, f);
+        } catch (e2) {
+          res.writeHead(502, { 'Content-Type': 'text/plain' }).end('segment indisponible');
+        }
       }
     }
     return true;

@@ -62,7 +62,7 @@ async function ouvrir(raw, headers, timeoutMs, redirects = 6) {
     if (!hoteAutorise(u)) throw Object.assign(new Error('host'), { code: 'host' });
     let res;
     if (INSECURE && u.protocol === 'http:') res = await brut(u, headers, timeoutMs);
-    else { const g = await guardUrl(current); res = await pinnedRequest(g.url, g.ip, timeoutMs, headers); }
+    else { const g = await guardUrl(current); res = await pinnedRequest(g.url, g.ip, Math.min(timeoutMs, 2500), headers); }
     if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
       const loc = res.headers.location; res.resume();
       if (!loc) throw Object.assign(new Error('bad_redirect'), { code: 'bad_redirect' });
@@ -89,7 +89,7 @@ export async function proxyRapide(req, res, src, id) {
   const headers = { 'user-agent': req.headers['user-agent'] || 'Sonora/1.0' };
   if (range) headers.range = range;
   const essai = async (s) => {
-    const up = await ouvrir(s.url, headers, 20000);
+    const up = await ouvrir(s.url, headers, 2500);
     const st = up.statusCode || 0;
     if (st === 416) {
       try { res.writeHead(416, { 'Content-Range': up.headers['content-range'] || 'bytes */*', 'Content-Length': '0' }); res.end(); } catch (e) {}

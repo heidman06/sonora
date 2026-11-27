@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.12.1 - 2026-11-27
+- FIX « le titre avance mais pas de son » : un bloc legacy du handler /musique/dl référençait rapideActif/resoudreRapide après leur suppression des imports → ReferenceError → 502 « proxy error » instantané à chaque requête froide d'ffmpeg, qui générait alors un segment de SILENCE (le morceau avançait sans son). Bloc supprimé.
+- HLS : en cas d'échec de génération, un seul retry après 3 s avant le fallback silence ; le silence n'est plus réutilisé que 60 s (au lieu de 10 min).
+- Proxy Range borné à 2,5 s pour ne jamais bloquer la lecture.
+- Mesures : segment HLS à froid 4,87 s (audio réel) ; avec URL pré-résolée 694 ms.
+
 ## v2.12.0 - 2026-11-27
 - Pré-résolution spéculative : les 3 premiers titres visibles (recherche, likes, téléchargements, playlist) et les têtes de mixes sont résolus côté serveur (POST/GET /api/mus/prefetch) dès l'affichage. Mesure prod : titre à froid pré-résolu servi en 100 ms (206, X-Sonora-Fast=1) au lieu de ~4 s.
 
