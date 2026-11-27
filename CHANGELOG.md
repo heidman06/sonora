@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.15.0 - 2026-11-27
+- Moov-first / lecture pendant le téléchargement : l'URL **complète** (`yt-dlp -g`, Range illimité) est pré-résolue et réutilisée.
+  - `/musique/dl` proxifie le Range immédiatement si l'URL est prête → **22 ms** mesurés (X-Sonora-Fast).
+  - HLS : ffmpeg lit l'URL complète (il seek le `moov` en fin de fichier) au lieu d'attendre le proxy → **segment froid 815 ms** (5,6 Mo) après pré-résolution, contre ~5 s avant.
+  - Sans pré-résolution : ~4 s (résolution yt-dlp) puis lecture immédiate.
+- Prefetch (résultats de recherche, likes, playlists, HEAD des titres suivants) résout désormais l'URL complète en tâche de fond.
+
 ## v2.14.1 - 2026-11-27
 - Tests : suppression du harnais e2e du proxy sidecar (chemin retiré en v2.14.0) ; la suite serveur repasse verte.
 

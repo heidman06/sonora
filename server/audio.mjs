@@ -8,7 +8,7 @@ import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { proxyRapide } from './stream-fast.mjs';
-import { urlCachee, resoudreRapide, prefetcher, telecharger } from './resolve-url.mjs';
+import { urlPleineCachee, prefetcher, telecharger } from './resolve-url.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -182,10 +182,14 @@ export async function handleAudio(req, res, path) {
   mkdirSync(dossier, { recursive: true });
   let fichiers = cacheValide(dossier, id);
 
-  // yt-dlp part à t=0 et remplit le cache ; le proxy Range du sidecar est limité à 256 Ko
-  // par googlevideo, donc on ne l'utilise pas pour la lecture complète.
+  // Démarrage rapide : si l'URL complète est déjà pré-résolue (yt-dlp -g), on proxifie
+  // le Range immédiatement (ffmpeg/browser lisent pendant que le cache se remplit).
   if (!fichiers.length && req.method !== 'HEAD') {
     void lancerTelechargement(id, dossier).catch(() => {});
+    const pleine = urlPleineCachee(id);
+    if (pleine) {
+      try { if (await proxyRapide(req, res, { url: pleine.url, mime: 'audio/mp4' }, id)) return true; } catch (e) { /* repli */ }
+    }
   }
 
   if (!fichiers.length && req.method !== 'HEAD') {

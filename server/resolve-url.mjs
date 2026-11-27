@@ -132,8 +132,15 @@ export async function telecharger(id, part) {
   } catch { try { ws.destroy(); } catch (e) {} return false; } finally { clearTimeout(minuteur); }
 }
 
+export function urlPleineCachee(id) {
+  const c = cache.get(id + ':pleine');
+  if (c && Date.now() - c.at < 30 * 60 * 1000) return c;
+  cache.delete(id + ':pleine');
+  return null;
+}
+
 export function prefetcher(ids) {
-  const list = [...new Set(ids)].filter((id) => /^[A-Za-z0-9_-]{11}$/.test(id) && !urlCachee(id) && !enCours.has(id)).slice(0, 3);
-  for (const id of list) void resoudre(id).catch(() => {});
+  const list = [...new Set(ids)].filter((id) => /^[A-Za-z0-9_-]{11}$/.test(id) && !urlPleineCachee(id)).slice(0, 3);
+  for (const id of list) void resoudrePleine(id).catch(() => {});
   return list.length;
 }

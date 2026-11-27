@@ -2,6 +2,7 @@
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, utimesSync } from 'node:fs';
 import { ouvrirBase } from './musique.mjs';
 import { dureesConnues } from './durees.mjs';
+import { urlPleineCachee } from './resolve-url.mjs';
 import { join, dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -43,7 +44,8 @@ function genererTs(id, d, port, ffmpeg) {
   if (existsSync(dest) && statSync(dest).size > 1000) return Promise.resolve(dest);
   const tmp = dest + '.part';
   const p = new Promise((resolve, reject) => {
-    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', 'http://127.0.0.1:' + port + '/musique/dl/' + id, '-vn', '-c:a', 'copy', '-f', 'mpegts', tmp], { stdio: 'ignore' });
+    const src = (urlPleineCachee(id) || {}).url || ('http://127.0.0.1:' + port + '/musique/dl/' + id);
+    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', src, '-vn', '-c:a', 'copy', '-f', 'mpegts', tmp], { stdio: 'ignore' });
     const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 120000);
     ff.on('close', (code) => {
       clearTimeout(minuteur);
@@ -75,7 +77,8 @@ function genererTsProgressif(req, res, id, d, port, ffmpeg) {
   }
   const tmp = dest + '.part';
   const p = new Promise((resolve) => {
-    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', 'http://127.0.0.1:' + port + '/musique/dl/' + id, '-vn', '-c:a', 'copy', '-f', 'mpegts', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const src = (urlPleineCachee(id) || {}).url || ('http://127.0.0.1:' + port + '/musique/dl/' + id);
+    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', src, '-vn', '-c:a', 'copy', '-f', 'mpegts', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
     const disque = createWriteStream(tmp);
     const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 120000);
     let entete = false, octets = 0, fini = false, clientParti = false;
