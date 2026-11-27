@@ -546,7 +546,13 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 
 /* ===== Scroll interne sur .player : la sheet (fond artwork + vignette) ne scrolle plus -> plus de couture ===== */
 #player.sheet { overflow: hidden; }
-#player .player { overflow-y: auto; min-height: 0; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-#player .player-foot { position: sticky; bottom: 0; z-index: 4; margin-top: 12px; padding: 14px 0 calc(6px + var(--safe-b)); background: linear-gradient(180deg, rgba(7,7,10,0), rgba(7,7,10,.94) 30%, rgba(7,7,10,.99)); }
-[data-theme="light"] #player .player-foot { background: linear-gradient(180deg, rgba(247,247,249,0), rgba(247,247,249,.95) 30%, rgba(247,247,249,.99)); }
+#player .player { overflow: hidden; min-height: 0; }
+#player .player-scroll { display: flex; flex-direction: column; align-items: center; width: 100%; flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#player .player-foot { position: static; flex: none; margin-top: 8px; padding: 6px 0 calc(6px + var(--safe-b)); background: none; }
+@media (min-width: 1000px) {
+  #player .player { overflow-y: auto; }
+  #player .player-scroll { display: contents; }
+  #player .player-foot { position: sticky; bottom: 0; z-index: 4; margin-top: 12px; padding: 14px 0 calc(6px + var(--safe-b)); background: linear-gradient(180deg, rgba(7,7,10,0), rgba(7,7,10,.94) 30%, rgba(7,7,10,.99)); }
+  [data-theme="light"] #player .player-foot { background: linear-gradient(180deg, rgba(247,247,249,0), rgba(247,247,249,.95) 30%, rgba(247,247,249,.99)); }
+}
 

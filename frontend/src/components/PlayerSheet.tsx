@@ -53,7 +53,7 @@ export function PlayerSheet(props: Props) {
   useEffect(() => {
     if (!showLyrics) return
     const t = window.setTimeout(() => {
-      const sheet = document.querySelector('#player .player')
+      const sheet = document.querySelector('#player .player-scroll') || document.querySelector('#player .player')
       const panel = document.querySelector('#player .player-panels')
       if (!sheet || !panel) return
       const target = panel.getBoundingClientRect().top - sheet.getBoundingClientRect().top + sheet.scrollTop - 16
@@ -84,6 +84,7 @@ export function PlayerSheet(props: Props) {
       <div className="sheet-grab" />
       <button className="sheet-close" aria-label={tr(lang, 'close')} onClick={props.onClose}><Icon name="close" size={16} /></button>
       <div className="player">
+        <div className="player-scroll">
         <Art id={current.id} className="player-art" />
         <div className="player-meta">
           <div className="player-title">{current.title}</div>
@@ -160,6 +161,7 @@ export function PlayerSheet(props: Props) {
         {showLyrics && <div className="player-panels"><LyricsPanel track={current} lang={lang} currentTime={currentTime} onSeek={(s) => engine.seekTo(s)} /></div>}
         {showSleep && <div className="player-panels"><SleepPicker lang={lang} mode={state.sleep.mode} endsAt={state.sleep.endsAt} onPick={(m) => engine.setSleep(m)} /></div>}
         {showRate && <div className="player-panels"><RatePicker lang={lang} rate={state.rate} hidden={state.hls} episode={state.current?.kind === 'episode'} onPick={(r) => engine.setRate(r)} /></div>}
+        </div>
         <div className="player-foot">
           <button className="queue-btn" onClick={props.onQueue}>{tr(lang, 'queue')} <span>({state.queue.length})</span></button>
         </div>

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.9.2 - 2026-11-27
+- Player mobile : le contenu (pochette→paroles) scrolle dans .player-scroll ; le bouton File d'attente reste HORS scroll, toujours visible en bas, jamais recouvert par les paroles ni l'état vide ; desktop conserve la grille + Queue sticky
+
 ## v2.9.1 - 2026-11-27
 - Bouton File d'attente (Queue) toujours visible : sticky en bas du player avec fond dégradé opaque → les paroles ne le recouvrent plus et il reste accessible sans scroller
 
