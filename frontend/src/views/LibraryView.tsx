@@ -6,6 +6,7 @@ import { navigate, useScrollMemory } from '../lib/hooks'
 import { Icon } from '../components/Icon'
 import { Art } from '../components/Art'
 import { TrackList } from '../components/TrackList'
+import { usePrefetch } from '../lib/prefetch'
 import { EmptyState } from '../components/EmptyState'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ApiError } from '../lib/api'
@@ -25,6 +26,8 @@ type Mode = 'login' | 'register'
 
 export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
   useScrollMemory('library')
+  usePrefetch(state.likes)
+  usePrefetch(state.downloads)
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

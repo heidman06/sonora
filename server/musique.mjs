@@ -2,6 +2,7 @@
 // musique.mjs - multi-account music database (playlists, likes, history, recos)
 // ============================================================
 import { DatabaseSync } from 'node:sqlite';
+import { prefetcher } from './resolve-url.mjs';
 import { composerMoods, catalogueStatique, MOODS_VERSION } from './musique-moods.mjs';
 import { composerMixes, MIXES_VERSION, melangerSeede } from './musique-mixes.mjs';
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
@@ -1035,7 +1036,12 @@ export function handleMusique(req, res, path, url) {
       if (route === '/mixes2' && req.method === 'GET') {
         const resp = mixes2sync(u.id);
         void warmMixes(u.id);
+        try { prefetcher((resp.mixes || []).slice(0, 3).map((x) => x.tracks && x.tracks[0] && x.tracks[0].videoId).filter(Boolean)); } catch (e) {}
         return json(200, resp);
+      }
+      if (route === '/prefetch') {
+        const ids = String(url.searchParams.get('ids') || '').split(',').filter((x) => /^[A-Za-z0-9_-]{11}$/.test(x)).slice(0, 5)
+        return json(200, { lances: prefetcher(ids) });
       }
       if (route === '/mixes') {
         return json(200, await mixes(u.id));

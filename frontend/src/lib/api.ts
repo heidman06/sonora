@@ -134,6 +134,12 @@ export class Api {
     return { id: 0, name: d.name || '', tracks: streams.map(pipedTrack) }
   }
 
+  prefetchAudio(ids: string[]): Promise<unknown> {
+    const list = ids.filter((id) => /^[A-Za-z0-9_-]{11}$/.test(id)).slice(0, 5)
+    if (!list.length) return Promise.resolve(null)
+    return this.json(MUS + '/prefetch?ids=' + encodeURIComponent(list.join(','))).catch(() => null)
+  }
+
   addToPlaylist(playlistId: number | string, track: Track): Promise<void> {
     return this.json(MUS + '/playlists/' + playlistId + '/tracks', this.body({
       videoId: track.id, title: track.title, artist: track.artist,

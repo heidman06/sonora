@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.12.0 - 2026-11-27
+- Pré-résolution spéculative : les 3 premiers titres visibles (recherche, likes, téléchargements, playlist) et les têtes de mixes sont résolus côté serveur (POST/GET /api/mus/prefetch) dès l'affichage. Mesure prod : titre à froid pré-résolu servi en 100 ms (206, X-Sonora-Fast=1) au lieu de ~4 s.
+
 ## v2.11.1 - 2026-11-27
 - Résolveur : --extractor-args youtube:player_skip=configs → résolution à froid 4,65 s → 4,05 s (mesuré) ; s applique à la pré-résolution des têtes et des titres préchargés.
 

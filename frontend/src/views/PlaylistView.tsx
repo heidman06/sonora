@@ -5,6 +5,7 @@ import { tr } from '../lib/i18n'
 import { navigate } from '../lib/hooks'
 import { Icon } from '../components/Icon'
 import { TrackList } from '../components/TrackList'
+import { usePrefetch } from '../lib/prefetch'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { UndoToast } from '../components/UndoToast'
 import { engine, shuffleArray } from '../audio/engine'
@@ -46,7 +47,8 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
   }
 
   const removeTrack = (t: Track, i: number) => {
-    if (!playlist) return
+    usePrefetch(playlist?.tracks)
+  if (!playlist) return
     const before = playlist
     setPlaylist({ ...playlist, tracks: playlist.tracks.filter((x) => x.id !== t.id) })
     void engine.removeFromPlaylist(id, t).then(() => {

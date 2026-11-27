@@ -8,6 +8,7 @@ import { navigate } from '../lib/hooks'
 import { Icon } from '../components/Icon'
 import { TrackList } from '../components/TrackList'
 import { EmptyState } from '../components/EmptyState'
+import { usePrefetch } from '../lib/prefetch'
 import { catalogueStatique, lireMoodsCache, ecrireMoodsCache } from '../lib/moods'
 import type { MoodsResponse } from '../lib/types'
 
@@ -39,6 +40,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   const [scope, setScope] = useState<'music' | 'pod'>('music')
   const [podResults, setPodResults] = useState<PodDiscovery[]>([])
   const [podLoading, setPodLoading] = useState(false)
+  usePrefetch(tracks)
   const api = engine.api
   const [perso, setPerso] = useState<MoodsResponse | null>(() => (state.token ? lireMoodsCache(state.user, lang) : null))
   useEffect(() => {
