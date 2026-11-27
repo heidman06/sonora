@@ -30,6 +30,9 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
   const [name, setName] = useState('')
   const [confirmDel, setConfirmDel] = useState(false)
   const [undo, setUndo] = useState<{ track: Track; index: number } | null>(null)
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  usePrefetch(playlist?.tracks)
 
   useEffect(() => {
     let alive = true
@@ -47,8 +50,7 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
   }
 
   const removeTrack = (t: Track, i: number) => {
-    usePrefetch(playlist?.tracks)
-  if (!playlist) return
+    if (!playlist) return
     const before = playlist
     setPlaylist({ ...playlist, tracks: playlist.tracks.filter((x) => x.id !== t.id) })
     void engine.removeFromPlaylist(id, t).then(() => {
@@ -57,6 +59,15 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
       setPlaylist(before)
       engine.showToast(tr(lang, 'error'))
     })
+  }
+
+  const retirerSelection = async () => {
+    if (!playlist || !selected.size) return
+    const cibles = playlist.tracks.filter((t) => selected.has(t.id))
+    setSelecting(false)
+    setSelected(new Set())
+    for (const t of cibles) { try { await engine.removeFromPlaylist(id, t) } catch (e) { /* continue */ } }
+    try { setPlaylist(await engine.api.playlist(id)) } catch (e) { /* noop */ }
   }
 
   const undoRemove = async () => {
@@ -111,6 +122,7 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
       <div className="pl-actions">
         <button className="btn-primary" onClick={() => play(false)}><Icon name="play" size={16} /> {tr(lang, 'play')}</button>
         <button className="btn-ghost" onClick={() => play(true)}><Icon name="shuffle" size={16} /> {tr(lang, 'shuffle')}</button>
+        <button className="btn-ghost" onClick={() => { setSelecting((v) => !v); setSelected(new Set()) }}>{selecting ? tr(lang, 'cancel') : tr(lang, 'select')}</button>
         <button className="btn-ghost" onClick={() => download(playlist.name + '.m3u', 'audio/x-mpegurl', toM3U(playlist))}>{tr(lang, 'exportM3U')}</button>
         <button className="btn-ghost" onClick={() => download(playlist.name + '.json', 'application/json', toJSON(playlist))}>{tr(lang, 'exportJSON')}</button>
         {numeric && <button className="pl-danger" onClick={() => setConfirmDel(true)}>{tr(lang, 'delete')}</button>}
@@ -121,8 +133,15 @@ export function PlaylistView({ lang, state, id, onDelete, onMenu }: Props) {
           <button className="btn-primary" onClick={() => navigate('#/search')}><Icon name="plus" size={16} /> {tr(lang, 'addTracks')}</button>
         </div>
       ) : (
-        <TrackList tracks={playlist.tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} memoryKey={'playlist.' + id}
+        <TrackList tracks={playlist.tracks} lang={lang} likedIds={likedIds} currentId={state.current?.id ?? null} selectable={selecting} selectedIds={selected} onToggleSelect={(t) => setSelected((prev) => { const n = new Set(prev); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n })} memoryKey={'playlist.' + id}
           removable={numeric} menu={!!onMenu} onMenu={onMenu} onRemove={removeTrack} />
+      )}
+      {selecting && selected.size > 0 && (
+        <div className="bulk-bar">
+          <span>{selected.size} {tr(lang, 'tracks')}</span>
+          <button className="btn-ghost" onClick={() => { setSelecting(false); setSelected(new Set()) }}>{tr(lang, 'cancel')}</button>
+          <button className="btn-primary" onClick={() => void retirerSelection()}>{tr(lang, 'remove')}</button>
+        </div>
       )}
       {undo && <UndoToast message={tr(lang, 'removed') + ' : ' + undo.track.title} actionLabel={tr(lang, 'undo')} onAction={() => void undoRemove()} onDone={() => setUndo(null)} />}
       {confirmDel && (

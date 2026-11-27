@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.22.0 - 2026-11-27
+- Bibliothèque/playlist : **sélection multiple** (mode Sélectionner, cases rondes, barre d'actions « Retirer » au-dessus de la tab bar) ; suppression groupée avec rafraîchissement.
+- Fix régression : `usePrefetch` était appelé dans `removeTrack` (hook hors rendu) — déplacé au niveau du composant.
+
 ## v2.21.0 - 2026-11-27
 - Stats d'écoute : sélecteur de période **3 / 6 / 12 mois** (l'API supportait déjà `months`), le reste (totaux, top titres, top artistes, barres mensuelles, accès depuis Bibliothèque) était déjà en place et reste inchangé.
 

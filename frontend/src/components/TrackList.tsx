@@ -17,17 +17,22 @@ interface Props {
   emptyKey?: string
   onRemove?: (t: Track, i: number) => void
   onMenu?: (t: Track) => void
+  selectable?: boolean
+  selectedIds?: Set<string>
+  onToggleSelect?: (t: Track) => void
 }
 
 const BATCH = 100
 
 // Delegated list: 3 stable handlers, absolute data-index, batches of 100 (design S0/N3).
-export function TrackList({ tracks, lang, likedIds, currentId, memoryKey, batchSize, removable, menu, emptyKey, onRemove, onMenu }: Props) {
+export function TrackList({ tracks, lang, likedIds, currentId, memoryKey, batchSize, removable, menu, emptyKey, onRemove, onMenu, selectable, selectedIds, onToggleSelect }: Props) {
   const size = batchSize ?? BATCH
   const listRef = useRef(tracks)
   listRef.current = tracks
   const removeRef = useRef(onRemove)
   removeRef.current = onRemove
+  const selectRef = useRef(onToggleSelect)
+  selectRef.current = onToggleSelect
   const menuRef = useRef(onMenu)
   menuRef.current = onMenu
   // Lecture unique au montage : l'écriture de persistance ne doit pas corrompre
@@ -79,6 +84,7 @@ export function TrackList({ tracks, lang, likedIds, currentId, memoryKey, batchS
     if (action === 'toggle') void engine.togglePlay()
     else if (action === 'play') void engine.playTrack(track, list, i)
     else if (action === 'like') void engine.toggleLike(track)
+    else if (action === 'select') selectRef.current?.(track)
     else if (action === 'remove') removeRef.current?.(track, i)
     else if (action === 'menu') menuRef.current?.(track)
   }, [])
@@ -88,7 +94,7 @@ export function TrackList({ tracks, lang, likedIds, currentId, memoryKey, batchS
   return (
     <div className={'list' + (batches === 1 ? ' stagger' : '')} onClick={onClick} onKeyDown={onKeyDown}>
       {visible.map((t, i) => (
-        <TrackRow key={t.id + i} track={t} index={i} lang={lang} liked={likedIds.has(t.id)} isCurrent={currentId === t.id} removable={removable} menu={menu} />
+        <TrackRow key={t.id + i} track={t} index={i} lang={lang} liked={likedIds.has(t.id)} isCurrent={currentId === t.id} removable={removable} menu={menu} selectable={selectable} selected={!!(selectedIds && selectedIds.has(t.id))} />
       ))}
       {!tracks.length && (
         emptyKey === 'noFavorites' ? <EmptyState lang={lang} icon="heart" titleKey="noFavorites" hintKey="noFavoritesHint" /> :
