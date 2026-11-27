@@ -1,0 +1,19 @@
+[Unit]
+Description=Sonora InnerTube resolver (URLs audio rapides)
+After=network-online.target
+
+[Service]
+Type=simple
+User=heidman
+Group=heidman
+WorkingDirectory=/home/heidman/resolver
+Environment=RESOLVER_PORT=8090
+Environment=HOME=/home/heidman
+Environment=SONORA_COOKIES=/home/heidman/dashboard/data/yt-cookies.txt
+ExecStart=/usr/local/bin/heid-node /home/heidman/resolver/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

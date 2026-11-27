@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.13.0 - 2026-11-27
+- Résolveur InnerTube local (sidecar `resolver/`, youtubei.js, port 8090) : URLs googlevideo m4a en ~0,9 s, avec cache 5 h et repli yt-dlp. Le hub proxifie le Range immédiatement (X-Sonora-Fast).
+- Mesures prod : titre à froid **4,66 s → 1,55 s** (206 + X-Sonora-Fast=1) ; segment HLS à froid avec audio réel 3,6 Mo ; avec URL pré-résolue, segment en ~0,7 s.
+- `resolve-url.mjs` : sidecar d'abord, yt-dlp en secours ; prefetch des titres visibles désormais quasi instantané.
+
 ## v2.12.1 - 2026-11-27
 - FIX « le titre avance mais pas de son » : un bloc legacy du handler /musique/dl référençait rapideActif/resoudreRapide après leur suppression des imports → ReferenceError → 502 « proxy error » instantané à chaque requête froide d'ffmpeg, qui générait alors un segment de SILENCE (le morceau avançait sans son). Bloc supprimé.
 - HLS : en cas d'échec de génération, un seul retry après 3 s avant le fallback silence ; le silence n'est plus réutilisé que 60 s (au lieu de 10 min).

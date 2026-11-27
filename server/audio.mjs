@@ -7,7 +7,8 @@ import {
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { rapideActif, resoudreRapide, proxyRapide } from './stream-fast.mjs';
+import { proxyRapide } from './stream-fast.mjs';
+import { urlCachee, resoudreRapide, prefetcher } from './resolve-url.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -162,14 +163,14 @@ export async function handleAudio(req, res, path) {
   mkdirSync(dossier, { recursive: true });
   let fichiers = cacheValide(dossier, id);
 
-  // Démarrage rapide : yt-dlp part à t=0 (cache en fond) et, en parallèle, Piped + proxy Range
-  // permettent au client de commencer en ~1 s au lieu d'attendre le fichier complet.
+  // Démarrage rapide : yt-dlp part à t=0 (cache en fond) et, en parallèle, le résolveur
+  // InnerTube local fournit une URL googlevideo (proxy Range) en ~1,3 s.
   if (!fichiers.length && req.method !== 'HEAD') {
     void lancerTelechargement(id, dossier).catch(() => {});
-    if (rapideActif()) {
-      const rapide = await resoudreRapide(id).catch(() => null);
+    try {
+      const rapide = urlCachee(id) || await resoudreRapide(id);
       if (rapide && await proxyRapide(req, res, rapide, id)) return true;
-    }
+    } catch (e) { /* repli yt-dlp */ }
   }
 
   if (!fichiers.length && req.method !== 'HEAD') {
@@ -180,6 +181,7 @@ export async function handleAudio(req, res, path) {
   if (req.method === 'HEAD') {
     // Silent prefetch through the shared in-flight map: never two yt-dlp on one .part file.
     void lancerTelechargement(id, dossier);
+    prefetcher([id]);
     res.writeHead(200, { 'Content-Type': 'audio/mp4', 'Cache-Control': 'no-store' }).end();
     return true;
   }
