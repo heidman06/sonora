@@ -10,17 +10,16 @@ import net from 'node:net';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const BUF = Buffer.alloc(4096, 3);
-let pipedHits = 0;
-
+let sidecarHits = 0;
 const port = () => new Promise((res) => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
 
-test('fast-start e2e : 206 sans yt-dlp, HEAD ne touche pas Piped', async () => {
+test('fast-start e2e : 206 via sidecar sans yt-dlp, HEAD ne résout pas', async () => {
   const audio = http.createServer((req, res) => {
     const r = req.headers.range;
     if (r) {
       const m = r.match(/bytes=(\d*)-(\d*)/);
-      let a = m[1] ? parseInt(m[1], 10) : 0;
-      let b = m[2] ? parseInt(m[2], 10) : BUF.length - 1;
+      const a = m[1] ? parseInt(m[1], 10) : 0;
+      const b = m[2] ? parseInt(m[2], 10) : BUF.length - 1;
       res.writeHead(206, { 'Content-Type': 'audio/mp4', 'Content-Range': 'bytes ' + a + '-' + b + '/' + BUF.length, 'Content-Length': b - a + 1 });
       res.end(BUF.slice(a, b + 1));
       return;
@@ -30,21 +29,21 @@ test('fast-start e2e : 206 sans yt-dlp, HEAD ne touche pas Piped', async () => {
   });
   await new Promise((r) => audio.listen(0, '127.0.0.1', r));
   const ap = audio.address().port;
-  const piped = http.createServer((req, res) => {
-    pipedHits += 1;
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ audioStreams: [{ url: 'http://127.0.0.1:' + ap + '/audio', mimeType: 'audio/mp4', bitrate: 128000, itag: 140 }] }));
+  const sidecar = http.createServer((req, res) => {
+    sidecarHits += 1;
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ url: 'http://127.0.0.1:' + ap + '/audio', mime: 'audio/mp4' }));
   });
-  await new Promise((r) => piped.listen(0, '127.0.0.1', r));
-  const pp = piped.address().port;
+  await new Promise((r) => sidecar.listen(0, '127.0.0.1', r));
+  const sp2 = sidecar.address().port;
   const data = mkdtempSync(join(tmpdir(), 'sonora-fast-'));
   const sp = await port();
   const proc = spawn(process.execPath, [join(ROOT, 'server', 'index.mjs')], {
     env: Object.assign({}, process.env, {
       SONORA_PORT: String(sp), SONORA_HOST: '127.0.0.1', SONORA_DATA: data,
       SONORA_CACHE_DIR: join(data, 'musique'), SONORA_WEB: join(ROOT, 'web'),
-      YTDLP_PATH: '/bin/false', PIPED_INTERNAL_URL: 'http://127.0.0.1:' + pp,
-      SONORA_FAST_ALLOW_INSECURE_UPSTREAM: '1', SONORA_FAST: '1',
+      YTDLP_PATH: '/bin/false', SONORA_RESOLVER_URL: 'http://127.0.0.1:' + sp2,
+      SONORA_RESOLVER_ALLOW_INSECURE: '1', SONORA_FAST_ALLOW_INSECURE_UPSTREAM: '1',
     }), stdio: 'ignore',
   });
   try {
@@ -52,8 +51,6 @@ test('fast-start e2e : 206 sans yt-dlp, HEAD ne touche pas Piped', async () => {
       try { const r = await fetch('http://127.0.0.1:' + sp + '/api/health').catch(() => null); if (r) break; } catch (e) {}
       await new Promise((r) => setTimeout(r, 100));
     }
-    const attendre = async () => { for (let i = 0; i < 50; i++) { try { const r = await fetch('http://127.0.0.1:' + sp + '/musique/dl/abcdefghijk', { method: 'HEAD' }); if (r) return r; } catch (e) {} await new Promise((r) => setTimeout(r, 100)); } return null; };
-    await attendre();
     const t0 = Date.now();
     const r1 = await fetch('http://127.0.0.1:' + sp + '/musique/dl/abcdefghijk', { headers: { range: 'bytes=0-99' } });
     const b1 = Buffer.from(await r1.arrayBuffer());
@@ -63,14 +60,12 @@ test('fast-start e2e : 206 sans yt-dlp, HEAD ne touche pas Piped', async () => {
     assert.equal(b1.length, 100);
     assert.deepEqual(b1, BUF.slice(0, 100));
     assert.ok(ms < 3000, 'démarrage rapide, mesuré ' + ms + 'ms');
-
-    const avant = pipedHits;
+    const avant = sidecarHits;
     const r2 = await fetch('http://127.0.0.1:' + sp + '/musique/dl/abcdefghijk', { method: 'HEAD' });
     assert.equal(r2.status, 200);
-    assert.equal(pipedHits, avant, 'HEAD ne doit pas appeler Piped');
+    assert.equal(sidecarHits, avant, 'HEAD ne doit pas appeler le sidecar');
   } finally {
-    proc.kill();
-    audio.close(); piped.close();
+    proc.kill(); audio.close(); sidecar.close();
     rmSync(data, { recursive: true, force: true });
   }
 });

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.13.1 - 2026-11-27
+- Tests : le harnais e2e du fast-start passe par le sidecar InnerTube (plus Piped) ; override `SONORA_RESOLVER_ALLOW_INSECURE` réservé aux tests.
+
 ## v2.13.0 - 2026-11-27
 - Résolveur InnerTube local (sidecar `resolver/`, youtubei.js, port 8090) : URLs googlevideo m4a en ~0,9 s, avec cache 5 h et repli yt-dlp. Le hub proxifie le Range immédiatement (X-Sonora-Fast).
 - Mesures prod : titre à froid **4,66 s → 1,55 s** (206 + X-Sonora-Fast=1) ; segment HLS à froid avec audio réel 3,6 Mo ; avec URL pré-résolue, segment en ~0,7 s.

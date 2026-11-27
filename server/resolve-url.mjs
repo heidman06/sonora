@@ -9,6 +9,7 @@ const COOKIES = process.env.SONORA_COOKIES || join(__dirname, 'data', 'yt-cookie
 const NODE = process.env.SONORA_NODE_BIN || '/usr/local/bin/heid-node';
 const EJS = process.env.SONORA_EJS || 'ejs:github';
 const SIDECAR = (process.env.SONORA_RESOLVER_URL || 'http://127.0.0.1:8090').replace(/\/$/, '');
+const INSECURE = process.env.SONORA_RESOLVER_ALLOW_INSECURE === '1'; // harnais de test uniquement
 const TTL = 5 * 3600 * 1000;
 const MAX = 200;
 const cache = new Map();
@@ -38,7 +39,8 @@ export async function resoudreRapide(id) {
     const j = await r.json();
     if (!j || typeof j.url !== 'string') return null;
     const u = new URL(j.url);
-    if (u.protocol !== 'https:' || !/(^|\.)googlevideo\.com$/i.test(u.hostname)) return null;
+    const loop = INSECURE && u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === '::1');
+    if (!loop && (u.protocol !== 'https:' || !/(^|\.)googlevideo\.com$/i.test(u.hostname))) return null;
     return memoriser(id, j.url, j.mime);
   } catch { return null; }
 }
