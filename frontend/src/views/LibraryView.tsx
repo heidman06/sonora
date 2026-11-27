@@ -41,6 +41,8 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
   const [confirmDel, setConfirmDel] = useState<{ id: number; name: string } | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [shareUrl, setShareUrl] = useState('')
+  const [plFilter, setPlFilter] = useState('')
+  const [plSort, setPlSort] = useState<'recent' | 'name'>('recent')
   const { canInstall, promptInstall } = useInstallPrompt()
 
   useEffect(() => {
@@ -114,6 +116,11 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
 
   const likedIds = new Set(state.likes.map((t) => t.id))
 
+  const playlistsAffichees = state.playlists
+    .filter((p) => !plFilter.trim() || p.name.toLowerCase().includes(plFilter.trim().toLowerCase()))
+    .slice()
+    .sort((a, b) => (plSort === 'name' ? a.name.localeCompare(b.name) : 0))
+
   return (
     <>
       <h1 className="h1">{tr(lang, 'library')}</h1>
@@ -154,7 +161,14 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
 
       <section className="lib-sec">
         <div className="lib-sec-head"><h2 className="lib-sec-title">{tr(lang, 'myPlaylists')}</h2>
-          <button className="section-link" onClick={() => setImportOpen(true)}>{tr(lang, 'importYouTube')}</button>
+          <button className="section-link" onClick={() => setImportOpen(true)}>{tr(lang, 'importTitle')}</button>
+        </div>
+        <div className="lib-tools">
+          <input className="lib-filter" value={plFilter} placeholder={tr(lang, 'filterPlaylists')} aria-label={tr(lang, 'filterPlaylists')} onChange={(e) => setPlFilter(e.target.value)} />
+          <select className="lib-sort" value={plSort} aria-label={tr(lang, 'sortBy')} onChange={(e) => setPlSort(e.target.value === 'name' ? 'name' : 'recent')}>
+            <option value="recent">{tr(lang, 'sortRecent')}</option>
+            <option value="name">{tr(lang, 'sortName')}</option>
+          </select>
         </div>
         <div className="add-new" style={{ marginBottom: 10 }}>
           <input value={newPlaylist} placeholder={tr(lang, 'newPlaylist')} onChange={(e) => setNewPlaylist(e.target.value)}
@@ -162,7 +176,7 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
           <button className="btn-primary" onClick={() => void createPlaylist()} disabled={creating}>{tr(lang, 'create')}</button>
         </div>
         <div className="pl-grid">
-          {state.playlists.map((playlist) => (
+          {playlistsAffichees.map((playlist) => (
             <div className="pl-card-wrap" key={playlist.id} style={{ position: 'relative' }}>
               <button className="pl-card" onClick={() => navigate('#/playlist/' + playlist.id)}>
                 <Art id={playlist.cover?.[0]} />
@@ -178,7 +192,7 @@ export function LibraryView({ lang, state, onDeletePlaylist, onMenu }: Props) {
               </button>
             </div>
           ))}
-          {!state.playlists.length && <EmptyState lang={lang} icon="library" titleKey="noPlaylists" hintKey="noPlaylistsHint" />}
+          {!playlistsAffichees.length && <EmptyState lang={lang} icon="library" titleKey={plFilter ? 'noResults' : 'noPlaylists'} hintKey="noPlaylistsHint" />}
         </div>
       </section>
 

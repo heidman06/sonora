@@ -580,3 +580,7 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 /* ===== Décalage paroles ===== */
 .lyr-nudge { width: 28px; height: 28px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); color: var(--txt); font-size: 16px; line-height: 1; cursor: pointer; }
 .lyr-nudge:hover { background: var(--surface-2); }
+/* ===== Bibliothèque : filtre + tri ===== */
+.lib-tools { display: flex; gap: 8px; margin: 2px 0 10px; }
+.lib-filter { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--txt); font: inherit; font-size: 14px; }
+.lib-sort { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--txt); font: inherit; font-size: 13px; }

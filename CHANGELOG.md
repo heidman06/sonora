@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.20.0 - 2026-11-27
+- Bibliothèque : **filtre** des playlists (recherche instantanée) et **tri** Récents / Nom, libellé d'import générique (« Importer une playlist »).
+
 ## v2.19.0 - 2026-11-27
 - Lecture : **décalage des paroles** ±0,5 s (persistant, boutons −/+, valeur affichée), contrôles hors zone de scroll ; le panneau se révèle correctement à l'ouverture (plus de chevauchement avec le bouton File d'attente).
 - Vérifié : crossfade réglable 0/3/6/10 s et minuteur sommeil 15/30/45/60/fin déjà en place — inchangés.
