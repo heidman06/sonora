@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.13.2 - 2026-11-27
+- HLS : tentative de streaming progressif du .ts (pipe ffmpeg + probesize réduit). **Aucun gain mesuré** : les m4a bruts de googlevideo ont l'atome moov en fin de fichier, ffmpeg doit donc lire tout le morceau avant de produire le segment ; les fichiers déjà cachés (finaliser = faststart) restent servis en 0,1–0,5 s. Le code est conservé (utile si le fichier est faststart) sans régression.
+- Constat : le cache de streaming est côté serveur (data/musique ~2 Go + data/hls ~1,6 Go) ; seuls les téléchargements « Offline » sont côté client (IndexedDB).
+
 ## v2.13.1 - 2026-11-27
 - Tests : le harnais e2e du fast-start passe par le sidecar InnerTube (plus Piped) ; override `SONORA_RESOLVER_ALLOW_INSECURE` réservé aux tests.
 

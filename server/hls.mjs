@@ -43,7 +43,7 @@ function genererTs(id, d, port, ffmpeg) {
   if (existsSync(dest) && statSync(dest).size > 1000) return Promise.resolve(dest);
   const tmp = dest + '.part';
   const p = new Promise((resolve, reject) => {
-    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-i', 'http://127.0.0.1:' + port + '/musique/dl/' + id, '-vn', '-c:a', 'copy', '-f', 'mpegts', tmp], { stdio: 'ignore' });
+    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', 'http://127.0.0.1:' + port + '/musique/dl/' + id, '-vn', '-c:a', 'copy', '-f', 'mpegts', tmp], { stdio: 'ignore' });
     const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 120000);
     ff.on('close', (code) => {
       clearTimeout(minuteur);
@@ -59,6 +59,53 @@ function genererTs(id, d, port, ffmpeg) {
       } catch (e) { reject(e); }
     });
     ff.on('error', (e) => { clearTimeout(minuteur); reject(e); });
+  }).finally(() => enCours.delete(id));
+  enCours.set(id, p);
+  return p;
+}
+
+
+// Streaming progressif : on envoie le .ts dès les premiers octets produits par ffmpeg,
+// tout en écrivant le fichier en cache pour les lectures suivantes.
+function genererTsProgressif(req, res, id, d, port, ffmpeg) {
+  const dest = join(d, id + '.ts');
+  if (existsSync(dest) && statSync(dest).size > 1000) { servirFichier(req, res, dest); return Promise.resolve(true); }
+  if (enCours.has(id)) {
+    return enCours.get(id).then((f) => { if (f) servirFichier(req, res, f); return true; }).catch(() => false);
+  }
+  const tmp = dest + '.part';
+  const p = new Promise((resolve) => {
+    const ff = spawn(ffmpeg, ['-y', '-loglevel', 'error', '-probesize', '32768', '-analyzeduration', '0', '-i', 'http://127.0.0.1:' + port + '/musique/dl/' + id, '-vn', '-c:a', 'copy', '-f', 'mpegts', 'pipe:1'], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const disque = createWriteStream(tmp);
+    const minuteur = setTimeout(() => { try { ff.kill('SIGKILL'); } catch (e) {} }, 120000);
+    let entete = false, octets = 0, fini = false, clientParti = false;
+    const finir = (ok) => {
+      if (fini) return;
+      fini = true;
+      clearTimeout(minuteur);
+      disque.end(() => {
+        try {
+          if (ok && statSync(tmp).size > 1000) { renameSync(tmp, dest); elaguer(d); }
+          else unlinkSync(tmp);
+        } catch (e) {}
+      });
+      resolve(entete);
+    };
+    ff.stdout.on('data', (c) => {
+      octets += c.length;
+      if (!entete) {
+        try { res.writeHead(200, { 'Content-Type': 'video/mp2t', 'Cache-Control': 'public, max-age=86400' }); entete = true; } catch (e) { entete = false; }
+      }
+      if (!clientParti && !res.writableEnded) { try { res.write(c); } catch (e) { clientParti = true; } }
+      if (!disque.writableEnded) disque.write(c);
+    });
+    ff.on('close', (code) => {
+      const ok = code === 0 && octets > 1000;
+      if (entete && !clientParti && !res.writableEnded) { try { res.end(); } catch (e) {} }
+      finir(ok);
+    });
+    ff.on('error', () => { if (!entete) { try { res.writeHead(502).end(); } catch (e) {} } finir(false); });
+    res.on('close', () => { clientParti = true; });
   }).finally(() => enCours.delete(id));
   enCours.set(id, p);
   return p;
@@ -144,7 +191,9 @@ export async function handleHls(req, res, path, url, opts) {
     const n = Number(url.searchParams.get('d'));
     const duree = Number.isFinite(n) && n >= 5 ? Math.min(3600, Math.round(n)) : 240;
     try {
-      const f = await genererTs(id, d, port, ffmpeg);
+      const ok = await genererTsProgressif(req, res, id, d, port, ffmpeg);
+      if (ok) return true;
+      const f = await genererSilence(id, d, ffmpeg, duree);
       servirFichier(req, res, f);
     } catch (e) {
       // L'audio peut être encore en cours de téléchargement : on retente une fois avant de silencer.
