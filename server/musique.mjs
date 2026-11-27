@@ -2,6 +2,7 @@
 // musique.mjs - multi-account music database (playlists, likes, history, recos)
 // ============================================================
 import { DatabaseSync } from 'node:sqlite';
+import { apercuImport } from './imports.mjs';
 import { prefetcher } from './resolve-url.mjs';
 import { composerMoods, catalogueStatique, MOODS_VERSION } from './musique-moods.mjs';
 import { composerMixes, MIXES_VERSION, melangerSeede } from './musique-mixes.mjs';
@@ -1004,6 +1005,46 @@ export function handleMusique(req, res, path, url) {
         return json(200, { ok: true });
       }
 
+      if (route === '/import/preview' && req.method === 'POST') {
+        const b = await corps(req);
+        try {
+          const r = await apercuImport(String(b.url || '').slice(0, 500), String(b.csv || '').slice(0, 500000));
+          return json(200, { source: r.source, name: r.name, truncated: !!r.truncated, tracks: r.tracks.slice(0, 200) });
+        } catch (e) { return json(422, { error: (e && e.code) || 'import' }); }
+      }
+      if (route === '/import/apply' && req.method === 'POST') {
+        const b = await corps(req);
+        const nom = texte(b.name, 120) || 'Import';
+        const liste = Array.isArray(b.tracks) ? b.tracks.slice(0, 500) : [];
+        if (!liste.length) return json(400, { error: 'tracks' });
+        const groups = new Map();
+        for (const t of liste) {
+          const g = texte(t && t.playlist, 120) || nom;
+          if (!groups.has(g)) groups.set(g, []);
+          groups.get(g).push(t);
+        }
+        const insPiste = d.prepare('INSERT OR IGNORE INTO playlist_tracks (playlist_id, video_id, title, artist, position) VALUES (?, ?, ?, ?, COALESCE((SELECT MAX(position)+1 FROM playlist_tracks WHERE playlist_id = ?), 0))');
+        const insPending = d.prepare('INSERT INTO pending (user_id, playlist_id, title, artist) VALUES (?, ?, ?, ?)');
+        const creer = d.prepare('INSERT INTO playlists (user_id, name) VALUES (?, ?)');
+        let premierId = 0, ajoutes = 0, enAttente = 0;
+        d.exec('BEGIN');
+        try {
+          for (const [g, items] of groups) {
+            const info = creer.run(u.id, g);
+            const pid = Number(info.lastInsertRowid);
+            if (!premierId) premierId = pid;
+            for (const t of items) {
+              const vid = String(t && t.videoId || '');
+              const titre = texte(t && t.title, 300), artiste = texte(t && t.artist, 300);
+              if (/^[A-Za-z0-9_-]{11}$/.test(vid) && !/^ep/.test(vid)) { insPiste.run(pid, vid, titre, artiste, pid); ajoutes++; }
+              else if (titre) { insPending.run(u.id, pid, titre, artiste); enAttente++; }
+            }
+          }
+          d.exec('COMMIT');
+        } catch (e) { try { d.exec('ROLLBACK'); } catch (e2) {} return json(500, { error: 'apply' }); }
+        purgeMoods(u.id); try { purgeMixes(u.id); } catch (e) {}
+        return json(200, { id: premierId, ajoutes, enAttente });
+      }
       if (route === '/ytplaylist' && req.method === 'GET') {
         const list = String(url.searchParams.get('list') || '').trim();
         if (!/^[A-Za-z0-9_-]{10,80}$/.test(list)) return json(400, { error: 'list' });

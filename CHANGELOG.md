@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.17.0 - 2026-11-27
+- Import v2 : une seule feuille avec onglets **Lien** / **CSV**. Détection automatique YouTube, Spotify (embed), Apple Music (page), Deezer (API publique) + export CSV. Aperçu (source, nb de titres, liste) puis import en une action.
+- API : `POST /api/mus/import/preview` et `/import/apply` (YouTube → piste directe ; Spotify/Apple/Deezer/CSV → playlist + résolution via `pending`). Fetch serveur limité aux hôtes connus, 4 Mo max, 15 s.
+- Mesures : Spotify 50 titres/336 ms, Apple 50/635 ms, Deezer 50/374 ms, YouTube 182/3,9 s, CSV instantané.
+
 ## v2.16.0 - 2026-11-27
 - Recherche : **recherches récentes** (8 max, chip + « Effacer », persistées en localStorage) affichées à la place de l'empty-state, et **filtre persistant** (Songs/Videos/Albums/Artists restauré au retour). Mobile/desktop inchangés sinon.
 

@@ -91,6 +91,14 @@ export class Api {
     }
   }
 
+  importPreview(body: { url?: string; csv?: string }): Promise<{ source: string; name: string; truncated: boolean; tracks: Array<{ videoId?: string; title: string; artist: string; duration?: number; playlist?: string }> }> {
+    return this.json(MUS + '/import/preview', this.body(body))
+  }
+
+  importApply(name: string, tracks: Array<{ videoId?: string; title: string; artist: string; duration?: number; playlist?: string }>): Promise<{ id: number; ajoutes: number; enAttente: number }> {
+    return this.json(MUS + '/import/apply', this.body({ name, tracks }))
+  }
+
   bulkAddToPlaylist(id: number | string, tracks: Track[]): Promise<{ added: number }> {
     return this.json(MUS + '/playlists/' + id + '/tracks/bulk', this.body({ tracks: tracks.map((t) => ({ videoId: t.id, title: t.title, artist: t.artist, duration: t.duration || 0 })) }))
   }
