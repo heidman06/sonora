@@ -7,6 +7,7 @@ import {
 import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { rapideActif, resoudreRapide, proxyRapide } from './stream-fast.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -160,6 +161,16 @@ export async function handleAudio(req, res, path) {
   const dossier = config.cacheDir;
   mkdirSync(dossier, { recursive: true });
   let fichiers = cacheValide(dossier, id);
+
+  // Démarrage rapide : yt-dlp part à t=0 (cache en fond) et, en parallèle, Piped + proxy Range
+  // permettent au client de commencer en ~1 s au lieu d'attendre le fichier complet.
+  if (!fichiers.length && req.method !== 'HEAD') {
+    void lancerTelechargement(id, dossier).catch(() => {});
+    if (rapideActif()) {
+      const rapide = await resoudreRapide(id).catch(() => null);
+      if (rapide && await proxyRapide(req, res, rapide, id)) return true;
+    }
+  }
 
   if (!fichiers.length && req.method !== 'HEAD') {
     await Promise.race([lancerTelechargement(id, dossier), new Promise((r) => setTimeout(r, 75000))]);

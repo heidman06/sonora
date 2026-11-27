@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.10.0 - 2026-11-27
+- Démarrage rapide audio (opt-in SONORA_FAST=1) : résolution Piped + proxy Range googlevideo (allowlist par saut, m4a, fallback strict, 416/403, plafond de flux) ; tests unitaires + e2e (206 sans yt-dlp, HEAD sans Piped). Désactivé par défaut : le Piped de cette instance renvoie 0 audioStreams et yt-dlp reste à ~4,6 s de résolution, donc aucun gain mesuré en prod.
+- Correctif réel des blancs entre titres : prefetch réarmé à chaque transition HLS (v2.9.4).
+
 ## v2.9.4 - 2026-11-27
 - File HLS iPhone : prefetchNext est réarmé à CHAQUE transition de piste (avant, seulement au démarrage de la file → 2 titres préchargés puis plus rien, d'où ~4,6 s de téléchargement à chaque morceau). Les 2 titres suivants sont maintenant préchargés en continu.
 
