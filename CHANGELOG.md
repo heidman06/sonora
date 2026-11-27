@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.14.1 - 2026-11-27
+- Tests : suppression du harnais e2e du proxy sidecar (chemin retiré en v2.14.0) ; la suite serveur repasse verte.
+
 ## v2.14.0 - 2026-11-27
 - HLS progressif RÉELLEMENT actif : `createWriteStream` manquait dans les imports de hls.mjs → l'appel levait une ReferenceError et retombait sur la génération non-progressive. Segment à froid (audio en cache) : **3,08 s → 47 ms**.
 - Téléchargement : l'URL du sidecar InnerTube est **throttlée à 256 Ko** par googlevideo (403 au-delà) ; le cache utilise désormais l'URL `yt-dlp -g` (Range complet) → les fichiers se remplissent à nouveau, prefetch et segments suivants redeviennent rapides.
