@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.9.1 - 2026-11-27
+- Bouton File d'attente (Queue) toujours visible : sticky en bas du player avec fond dégradé opaque → les paroles ne le recouvrent plus et il reste accessible sans scroller
+
 ## v2.9.0 - 2026-11-26
 - Vue player : le scroll passe sur .player (interne) ; la sheet (fond artwork flouté + vignette) ne scrolle plus → suppression de la couture horizontale / bande de couleur différente en bas ; fond ambiant uniforme ; file d'attente en flux sous les paroles ; scroll tactile/molette opérationnel
 
