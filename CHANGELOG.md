@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.11.0 - 2026-11-27
+- Pré-résolution des URLs audio (yt-dlp -g + cookies, cache TTL 5 h) et proxy Range googlevideo : les têtes de mixes sont pré-résolues dès /api/mus/mixes2 et chaque titre préchargé (HEAD) l'est aussi. Mesure prod : première tête de mix à 77 ms (X-Sonora-Fast=1) au lieu de ~4,6 s.
+- Piped local vérifié : image déjà à jour, 0 audioStreams (protection YouTube) → non utilisable comme résolveur ; le chemin Piped reste opt-in.
+
 ## v2.10.0 - 2026-11-27
 - Démarrage rapide audio (opt-in SONORA_FAST=1) : résolution Piped + proxy Range googlevideo (allowlist par saut, m4a, fallback strict, 416/403, plafond de flux) ; tests unitaires + e2e (206 sans yt-dlp, HEAD sans Piped). Désactivé par défaut : le Piped de cette instance renvoie 0 audioStreams et yt-dlp reste à ~4,6 s de résolution, donc aucun gain mesuré en prod.
 - Correctif réel des blancs entre titres : prefetch réarmé à chaque transition HLS (v2.9.4).

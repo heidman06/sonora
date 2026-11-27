@@ -83,3 +83,11 @@ Zéro dépendance npm nouvelle ; HTTP sortant uniquement côté serveur ; URL cl
 ### Corrections après critique (Goldfish, 14 constats)
 - Allowlist par saut (redirects re-gardés), m4a obligatoire, 416 transmis, purge 403 + une re-résolution, plafond 6 flux simultanés, 127.0.0.1 uniquement sous flag de test.
 - proxyRapide(req,res,src,id) : l id est nécessaire à la purge ; interface mise à jour ici.
+
+## Option 1 (résolveur) — résultat (2026-11-27)
+
+- Piped local : image déjà à jour (digest identique au latest), donc le code amont est en cause ; il renvoie 0 audioStreams (protection YouTube sans cookies). Aucune mise à jour ne peut le réparer.
+- Résolveur retenu : **yt-dlp -g avec les cookies existants** (le seul qui fonctionne ici, ~4,6 s), avec **cache d URL TTL 5 h** et **pré-résolution en tâche de fond**.
+- Pré-résolution des têtes de mixes dès que /api/mus/mixes2 est servi (3 têtes), et de chaque titre préchargé (HEAD).
+- Mesure prod : première tête de mix servie en **77 ms** avec X-Sonora-Fast=1 (proxy Range googlevideo), au lieu de ~4,6 s. Les autres têtes étaient déjà en cache (2–5 ms).
+- Limite assumée : un titre **jamais pré-résolu** (tap arbitraire immédiat) reste à ~4,6 s ; aucun résolveur local ne descend sous ce plancher sans cookies/PO token.
