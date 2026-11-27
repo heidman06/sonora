@@ -25,15 +25,16 @@ export function StatsView({ lang, state }: Props) {
   const [data, setData] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [months, setMonths] = useState(6)
 
   useEffect(() => {
     let alive = true
-    engine.api.stats().then((s) => {
+    engine.api.stats(months).then((s) => {
       if (!alive) return
       setData(s); setLoading(false)
     }).catch(() => { if (alive) { setLoading(false); setError(true) } })
     return () => { alive = false }
-  }, [])
+  }, [months])
 
   const back = <button className="back-btn" aria-label={tr(lang, 'back')} onClick={() => navigate('#/library')}><Icon name="prev" size={18} /></button>
   if (loading) return <>{back}<h1 className="h1">{tr(lang, 'statsTitle')}</h1><div className="empty">{tr(lang, 'loading')}</div></>
@@ -52,6 +53,11 @@ export function StatsView({ lang, state }: Props) {
         <div style={card}><div style={cardNum}>{data.totals.tracks}</div><div style={cardLabel}>{tr(lang, 'statsTracks')}</div></div>
       </div>
       <p className="sub">{tr(lang, 'statsHonest')}</p>
+      <div className="segmented" role="group" aria-label={tr(lang, 'statsMonths')} style={{ marginTop: 10, width: 'fit-content' }}>
+        {[3, 6, 12].map((n) => (
+          <button key={n} type="button" className={months === n ? 'on' : ''} onClick={() => setMonths(n)}>{n} {tr(lang, 'statsMonths')}</button>
+        ))}
+      </div>
 
       <h2 style={h2}>{tr(lang, 'statsTopTracks')}</h2>
       <TrackList tracks={topTracks} lang={lang} likedIds={new Set(state.likes.map((t) => t.id))} currentId={state.current?.id ?? null} />

@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.21.0 - 2026-11-27
+- Stats d'écoute : sélecteur de période **3 / 6 / 12 mois** (l'API supportait déjà `months`), le reste (totaux, top titres, top artistes, barres mensuelles, accès depuis Bibliothèque) était déjà en place et reste inchangé.
+
 ## v2.20.0 - 2026-11-27
 - Bibliothèque : **filtre** des playlists (recherche instantanée) et **tri** Récents / Nom, libellé d'import générique (« Importer une playlist »).
 
