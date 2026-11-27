@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.9.3 - 2026-11-27
+- Player mobile : scrollbar du contenu masquée (plus de barre grise à droite, largeur rendue aux contrôles) ; le scroll reste tactile/molette
+
 ## v2.9.2 - 2026-11-27
 - Player mobile : le contenu (pochette→paroles) scrolle dans .player-scroll ; le bouton File d'attente reste HORS scroll, toujours visible en bas, jamais recouvert par les paroles ni l'état vide ; desktop conserve la grille + Queue sticky
 
