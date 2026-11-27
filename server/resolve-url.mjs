@@ -34,7 +34,7 @@ export function resoudre(id) {
   if (enCours.has(id)) return enCours.get(id);
   const p = new Promise((resolve) => {
     const args = ['--cookies', COOKIES, '--js-runtimes', 'node:' + NODE, '--remote-components', EJS,
-      '--no-warnings', '-f', '140/bestaudio[ext=m4a]', '-g', 'https://www.youtube.com/watch?v=' + id];
+      '--no-warnings', '--extractor-args', 'youtube:player_skip=configs', '-f', '140/bestaudio[ext=m4a]', '-g', 'https://www.youtube.com/watch?v=' + id];
     const proc = spawn(YTDLP, args, { stdio: ['ignore', 'pipe', 'ignore'] });
     let out = '';
     const minuteur = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (e) {} }, 20000);

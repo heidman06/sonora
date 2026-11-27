@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.11.1 - 2026-11-27
+- Résolveur : --extractor-args youtube:player_skip=configs → résolution à froid 4,65 s → 4,05 s (mesuré) ; s applique à la pré-résolution des têtes et des titres préchargés.
+
 ## v2.11.0 - 2026-11-27
 - Pré-résolution des URLs audio (yt-dlp -g + cookies, cache TTL 5 h) et proxy Range googlevideo : les têtes de mixes sont pré-résolues dès /api/mus/mixes2 et chaque titre préchargé (HEAD) l'est aussi. Mesure prod : première tête de mix à 77 ms (X-Sonora-Fast=1) au lieu de ~4,6 s.
 - Piped local vérifié : image déjà à jour, 0 audioStreams (protection YouTube) → non utilisable comme résolveur ; le chemin Piped reste opt-in.
