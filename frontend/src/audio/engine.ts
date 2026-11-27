@@ -816,6 +816,7 @@ export class PlayerEngine {
           this.patch({ current, currentTime: rel, duration: dur, hls: true })
           this.updateMediaSession()
           this.updatePositionState()
+          this.prefetchNext()
           if ('mediaSession' in navigator) { try { navigator.mediaSession.playbackState = 'playing' } catch { /* noop */ } }
           return
         }
