@@ -8,7 +8,7 @@ import { join, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { proxyRapide } from './stream-fast.mjs';
-import { urlCachee, resoudreRapide, prefetcher } from './resolve-url.mjs';
+import { urlCachee, resoudreRapide, prefetcher, telecharger } from './resolve-url.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -79,6 +79,12 @@ function elaguerCache(dossier) {
   } catch (e) {}
 }
 
+// Téléchargement via l'URL googlevideo déjà résolue (sidecar InnerTube) : yt-dlp ne sait
+// plus lister les formats pour beaucoup de vidéos (-f 140 échoue), mais -g/InnerTube, oui.
+async function telechargerUrl(id, part) {
+  return telecharger(id, part);
+}
+
 function lancerTelechargement(id, dossier) {
   if (telechargementsEnCours.has(id)) return telechargementsEnCours.get(id);
   const dest = join(dossier, id + '.m4a');
@@ -86,36 +92,49 @@ function lancerTelechargement(id, dossier) {
   const url = 'https://www.youtube.com/watch?v=' + id;
   const args = ['--cookies', config.cookies, '-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--http-chunk-size', '10M', '--no-warnings', '-o', part, url];
   const complet = ytdlpArgs(['-f', '140/bestaudio[ext=m4a]', '--no-playlist', '--concurrent-fragments', '4', '--http-chunk-size', '10M', '-o', part, url]);
-  const promesse = new Promise((res) => {
-    const lancer = (a) => {
-      const proc = spawn(config.ytdlp, a, { stdio: 'ignore' });
-      const minuteur = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (e) {} }, 120000);
-      proc.on('close', (code) => {
-        clearTimeout(minuteur);
-        try {
-          if (code !== 0) {
-            try { unlinkSync(part); } catch (e) {}
-            if (a === args) { lancer(complet); return; }
-          }
-          const t = statSync(part).size;
-          if (code === 0 && t > 200000) {
-            finaliser(part, dest, () => {
-              try { writeFileSync(join(dossier, id + '.ok'), String(statSync(dest).size)); } catch (e) {}
-              elaguerCache(dossier);
-              telechargementsEnCours.delete(id);
-              res(dest);
-            });
-            return;
-          }
-          try { unlinkSync(part); } catch (e) {}
-        } catch (e) {}
-        telechargementsEnCours.delete(id);
-        res(null);
+  const promesse = (async () => {
+    const ok = await telechargerUrl(id, part);
+    if (ok) {
+      return await new Promise((res) => {
+        finaliser(part, dest, () => {
+          try { writeFileSync(join(dossier, id + '.ok'), String(statSync(dest).size)); } catch (e) {}
+          elaguerCache(dossier);
+          telechargementsEnCours.delete(id);
+          res(dest);
+        });
       });
-      proc.on('error', () => { clearTimeout(minuteur); telechargementsEnCours.delete(id); res(null); });
-    };
-    lancer(args);
-  });
+    }
+    return await new Promise((res) => {
+      const lancer = (a) => {
+        const proc = spawn(config.ytdlp, a, { stdio: 'ignore' });
+        const minuteur = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (e) {} }, 120000);
+        proc.on('close', (code) => {
+          clearTimeout(minuteur);
+          try {
+            if (code !== 0) {
+              try { unlinkSync(part); } catch (e) {}
+              if (a === args) { lancer(complet); return; }
+            }
+            const t = statSync(part).size;
+            if (code === 0 && t > 200000) {
+              finaliser(part, dest, () => {
+                try { writeFileSync(join(dossier, id + '.ok'), String(statSync(dest).size)); } catch (e) {}
+                elaguerCache(dossier);
+                telechargementsEnCours.delete(id);
+                res(dest);
+              });
+              return;
+            }
+            try { unlinkSync(part); } catch (e) {}
+          } catch (e) {}
+          telechargementsEnCours.delete(id);
+          res(null);
+        });
+        proc.on('error', () => { clearTimeout(minuteur); telechargementsEnCours.delete(id); res(null); });
+      };
+      lancer(args);
+    });
+  })();
   telechargementsEnCours.set(id, promesse);
   return promesse;
 }
@@ -163,14 +182,10 @@ export async function handleAudio(req, res, path) {
   mkdirSync(dossier, { recursive: true });
   let fichiers = cacheValide(dossier, id);
 
-  // Démarrage rapide : yt-dlp part à t=0 (cache en fond) et, en parallèle, le résolveur
-  // InnerTube local fournit une URL googlevideo (proxy Range) en ~1,3 s.
+  // yt-dlp part à t=0 et remplit le cache ; le proxy Range du sidecar est limité à 256 Ko
+  // par googlevideo, donc on ne l'utilise pas pour la lecture complète.
   if (!fichiers.length && req.method !== 'HEAD') {
     void lancerTelechargement(id, dossier).catch(() => {});
-    try {
-      const rapide = urlCachee(id) || await resoudreRapide(id);
-      if (rapide && await proxyRapide(req, res, rapide, id)) return true;
-    } catch (e) { /* repli yt-dlp */ }
   }
 
   if (!fichiers.length && req.method !== 'HEAD') {

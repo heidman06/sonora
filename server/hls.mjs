@@ -1,5 +1,5 @@
 // Sonora - HLS queue for background playback on iOS.
-import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, utimesSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, utimesSync } from 'node:fs';
 import { ouvrirBase } from './musique.mjs';
 import { dureesConnues } from './durees.mjs';
 import { join, dirname } from 'node:path';

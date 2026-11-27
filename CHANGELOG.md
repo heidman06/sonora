@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.14.0 - 2026-11-27
+- HLS progressif RÉELLEMENT actif : `createWriteStream` manquait dans les imports de hls.mjs → l'appel levait une ReferenceError et retombait sur la génération non-progressive. Segment à froid (audio en cache) : **3,08 s → 47 ms**.
+- Téléchargement : l'URL du sidecar InnerTube est **throttlée à 256 Ko** par googlevideo (403 au-delà) ; le cache utilise désormais l'URL `yt-dlp -g` (Range complet) → les fichiers se remplissent à nouveau, prefetch et segments suivants redeviennent rapides.
+- Retrait du proxy Range sidecar dans /musique/dl (il ajoutait ~1 s puis échouait au-delà de 256 Ko).
+- Reste : le choix d'un titre totalement froid (audio non téléchargé) reste à ~4 s (résolution yt-dlp) + lecture ; piste suivante = moov-first/fMP4.
+
 ## v2.13.2 - 2026-11-27
 - HLS : tentative de streaming progressif du .ts (pipe ffmpeg + probesize réduit). **Aucun gain mesuré** : les m4a bruts de googlevideo ont l'atome moov en fin de fichier, ffmpeg doit donc lire tout le morceau avant de produire le segment ; les fichiers déjà cachés (finaliser = faststart) restent servis en 0,1–0,5 s. Le code est conservé (utile si le fichier est faststart) sans régression.
 - Constat : le cache de streaming est côté serveur (data/musique ~2 Go + data/hls ~1,6 Go) ; seuls les téléchargements « Offline » sont côté client (IndexedDB).

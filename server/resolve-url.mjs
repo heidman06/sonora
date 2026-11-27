@@ -1,5 +1,6 @@
 // Pré-résolution des URLs googlevideo : sidecar InnerTube (youtubei.js, ~1 s) puis yt-dlp en secours.
 import { spawn } from 'node:child_process';
+import { createWriteStream } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -76,6 +77,59 @@ function parYtdlp(id) {
     });
     proc.on('error', () => { clearTimeout(minuteur); resolve(null); });
   });
+}
+
+
+// Télécharge l'audio depuis l'URL googlevideo résolue (yt-dlp ne liste plus les formats).
+
+// URL complète (Range illimité) : seul yt-dlp -g la fournit ; le sidecar InnerTube est
+// limité aux 256 premiers Ko par googlevideo (403 au-delà).
+export function resoudrePleine(id) {
+  const c = cache.get(id + ':pleine');
+  if (c && Date.now() - c.at < 30 * 60 * 1000) return Promise.resolve(c);
+  return new Promise((resolve) => {
+    const args = ['--cookies', COOKIES, '--js-runtimes', 'node:' + NODE, '--remote-components', EJS,
+      '--no-warnings', '--extractor-args', 'youtube:player_skip=configs', '-f', 'bestaudio[ext=m4a]/bestaudio', '-g', 'https://www.youtube.com/watch?v=' + id];
+    const proc = spawn(YTDLP, args, { stdio: ['ignore', 'pipe', 'ignore'] });
+    let out = '';
+    const minuteur = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (e) {} }, 20000);
+    proc.stdout.on('data', (ch) => { out += ch; });
+    proc.on('close', (code) => {
+      clearTimeout(minuteur);
+      const ligne = out.split('\n').map((x) => x.trim()).filter((x) => /^https:\/\//.test(x)).pop() || '';
+      try {
+        if (code === 0 && ligne && /(^|\.)googlevideo\.com$/i.test(new URL(ligne).hostname)) {
+          const v = { id, url: ligne, at: Date.now() };
+          cache.set(id + ':pleine', v);
+          return resolve(v);
+        }
+      } catch (e) { /* ignore */ }
+      resolve(null);
+    });
+    proc.on('error', () => { clearTimeout(minuteur); resolve(null); });
+  });
+}
+
+export async function telecharger(id, part) {
+  const r = await resoudrePleine(id).catch(() => null);
+  if (!r || !r.url) return false;
+  const ctrl = new AbortController();
+  const minuteur = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 180000);
+  const ws = createWriteStream(part);
+  let total = 0;
+  let taille = 0;
+  try { taille = Number(new URL(r.url).searchParams.get('clen')) || 0; } catch (e) { taille = 0; }
+  try {
+    const rep = await fetch(r.url, { headers: { 'user-agent': 'Mozilla/5.0 (Sonora)', range: 'bytes=0-' }, signal: ctrl.signal });
+    if (!rep.ok || !rep.body) { try { ws.destroy(); } catch (e) {} return false; }
+    for await (const chunk of rep.body) {
+      total += chunk.length;
+      if (!ws.write(chunk)) await new Promise((res) => ws.once('drain', res));
+    }
+    await new Promise((res) => ws.end(res));
+    if (taille) return total >= Math.floor(taille * 0.98);
+    return total > 200000;
+  } catch { try { ws.destroy(); } catch (e) {} return false; } finally { clearTimeout(minuteur); }
 }
 
 export function prefetcher(ids) {
