@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.15.1 - 2026-11-27
+- CI : suppression effective du harnais `tests/stream-fast-e2e.test.mjs` (chemin proxy sidecar retiré) qui faisait échouer le job « Unit and API tests » sur GitHub.
+
 ## v2.15.0 - 2026-11-27
 - Moov-first / lecture pendant le téléchargement : l'URL **complète** (`yt-dlp -g`, Range illimité) est pré-résolue et réutilisée.
   - `/musique/dl` proxifie le Range immédiatement si l'URL est prête → **22 ms** mesurés (X-Sonora-Fast).
