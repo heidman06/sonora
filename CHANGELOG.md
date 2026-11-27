@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.16.0 - 2026-11-27
+- Recherche : **recherches récentes** (8 max, chip + « Effacer », persistées en localStorage) affichées à la place de l'empty-state, et **filtre persistant** (Songs/Videos/Albums/Artists restauré au retour). Mobile/desktop inchangés sinon.
+
 ## v2.15.2 - 2026-11-27
 - Recherche mobile : le chip « Podcasts » n'est plus collé au sous-titre (marge 16 px au-dessus, 14 px en dessous) ; desktop inchangé (chip masqué ≥1000 px).
 

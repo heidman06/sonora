@@ -557,3 +557,9 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
   [data-theme="light"] #player .player-foot { background: linear-gradient(180deg, rgba(247,247,249,0), rgba(247,247,249,.95) 30%, rgba(247,247,249,.99)); }
 }
 
+/* ===== Recherches récentes (recherche à vide) ===== */
+.recent-search { margin: 6px 0 12px; }
+.recent-head { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 8px; }
+.recent-head span { font-size: 12.5px; font-weight: 650; color: var(--txt-2); }
+.recent-clear { border: 0; background: none; color: var(--txt-3); font-size: 12.5px; padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+.recent-clear:hover { color: var(--txt); background: var(--surface); }

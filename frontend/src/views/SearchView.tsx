@@ -29,7 +29,13 @@ const FILTERS = [
 
 export function SearchView({ lang, state, query, onMenu }: Props) {
   const [text, setText] = useState(query)
-  const [filter, setFilter] = useState('music_songs')
+  const [filter, setFilter] = useState<string>(() => {
+    try { const v = localStorage.getItem('sonora.search.filter'); if (v && FILTERS.some((f) => f.key === v)) return v } catch (e) { /* noop */ }
+    return 'music_songs'
+  })
+  const [recents, setRecents] = useState<string[]>(() => {
+    try { const v = JSON.parse(localStorage.getItem('sonora.search.recents') || '[]'); return Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, 8) : [] } catch (e) { return [] }
+  })
   const [items, setItems] = useState<PipedItem[]>([])
   const [tracks, setTracks] = useState<Track[]>([])
   const [nextpage, setNextpage] = useState('')
@@ -41,6 +47,15 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
   const [podResults, setPodResults] = useState<PodDiscovery[]>([])
   const [podLoading, setPodLoading] = useState(false)
   usePrefetch(tracks)
+  useEffect(() => { try { localStorage.setItem('sonora.search.filter', filter) } catch (e) { /* noop */ } }, [filter])
+  const pushRecent = (q: string) => {
+    setRecents((prev) => {
+      const next = [q, ...prev.filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 8)
+      try { localStorage.setItem('sonora.search.recents', JSON.stringify(next)) } catch (e) { /* noop */ }
+      return next
+    })
+  }
+  const clearRecents = () => { setRecents([]); try { localStorage.removeItem('sonora.search.recents') } catch (e) { /* noop */ } }
   const api = engine.api
   const [perso, setPerso] = useState<MoodsResponse | null>(() => (state.token ? lireMoodsCache(state.user, lang) : null))
   useEffect(() => {
@@ -95,6 +110,7 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
     if (timer.current) window.clearTimeout(timer.current)
     suggestOpen.current = false
     setSuggestions([])
+    pushRecent(q)
     ;(document.activeElement as HTMLElement | null)?.blur()
     navigate('#/search/' + encodeURIComponent(q))
   }
@@ -162,7 +178,18 @@ export function SearchView({ lang, state, query, onMenu }: Props) {
         <button className={'pod-scope' + (scope === 'pod' ? ' on' : '')} onClick={() => setScope(scope === 'pod' ? 'music' : 'pod')}><Icon name="note" size={14} /> {tr(lang, 'podcasts')}</button>
       </div>
       <div id="results" className="list">
-        {scope === 'music' && !query.trim() && <EmptyState lang={lang} icon="search" titleKey="searchTitle" hintKey="searchHint" />}
+        {scope === 'music' && !query.trim() && recents.length > 0 && (
+          <div className="recent-search">
+            <div className="recent-head">
+              <span>{tr(lang, 'searchRecent')}</span>
+              <button className="recent-clear" onClick={clearRecents}>{tr(lang, 'searchClear')}</button>
+            </div>
+            <div className="chips" style={{ flexWrap: 'wrap' }}>
+              {recents.map((q) => <button className="chip" key={q} onClick={() => submit(q)}><Icon name="search" size={13} /> {q}</button>)}
+            </div>
+          </div>
+        )}
+        {scope === 'music' && !query.trim() && recents.length === 0 && <EmptyState lang={lang} icon="search" titleKey="searchTitle" hintKey="searchHint" />}
         {scope === 'music' && !query.trim() && chips.length > 0 && (
           <div className="chips" style={{ flexWrap: 'wrap', marginTop: 14 }}>
             {chips.map((c) => <button className="chip" key={c.q} onClick={() => submit(c.q)}>{c.label}</button>)}
