@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.19.0 - 2026-11-27
+- Lecture : **décalage des paroles** ±0,5 s (persistant, boutons −/+, valeur affichée), contrôles hors zone de scroll ; le panneau se révèle correctement à l'ouverture (plus de chevauchement avec le bouton File d'attente).
+- Vérifié : crossfade réglable 0/3/6/10 s et minuteur sommeil 15/30/45/60/fin déjà en place — inchangés.
+- HLS iOS : file sans blanc (gapless) par construction ; crossfade désactivé en HLS (message existant).
+
 ## v2.18.0 - 2026-11-27
 - PWA **share-target** : partager un lien Spotify/Apple/YouTube vers Sonara ouvre l'import prérempli avec aperçu automatique (SW `/musique/share` → `?share=` → `#/library` → feuille Import). Testé de bout en bout.
 - **Invite d'installation** : bouton « Installer l'application » dans Bibliothèque quand `beforeinstallprompt` est disponible (PWA standalone).

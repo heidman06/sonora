@@ -20,6 +20,14 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   const [record, setRecord] = useState<LyricsRecord | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [attempt, setAttempt] = useState(0)
+  const [offset, setOffset] = useState<number>(() => {
+    try { const v = Number(localStorage.getItem('sonora.lyrics.offset')); return Number.isFinite(v) ? Math.max(-5000, Math.min(5000, v)) : 0 } catch (e) { return 0 }
+  })
+  const nudge = (delta: number) => setOffset((prev) => {
+    const next = Math.max(-5000, Math.min(5000, prev + delta))
+    try { localStorage.setItem('sonora.lyrics.offset', String(next)) } catch (e) { /* noop */ }
+    return next
+  })
   const rowRefs = useRef<Array<HTMLButtonElement | null>>([])
   const boxRef = useRef<HTMLDivElement | null>(null)
 
@@ -36,11 +44,22 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   }, [track.id, attempt])
 
   const lines = useMemo(() => (record?.synced ? parseLrc(record.synced) : []), [record])
+  const t = currentTime + offset / 1000
   let active = -1
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].time <= currentTime) active = i
+    if (lines[i].time <= t) active = i
     else break
   }
+
+  useEffect(() => {
+    if (!lines.length) return
+    const panneau = boxRef.current && boxRef.current.closest('.player-panels')
+    const sc = panneau && panneau.closest('.player-scroll')
+    if (panneau && sc) {
+      const delta = panneau.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 8
+      try { sc.scrollTo({ top: Math.max(0, delta), behavior: 'auto' }) } catch (e) { /* noop */ }
+    }
+  }, [lines.length])
 
   useEffect(() => {
     // Scroll confiné au conteneur de paroles : scrollIntoView scrollerait aussi la page/sheet (vue cassée).
@@ -60,15 +79,22 @@ export function LyricsPanel({ track, lang, currentTime, onSeek }: Props) {
   if (record?.instrumental) return <EmptyState lang={lang} icon="note" titleKey="lyricsInstrumental" hintKey="lyricsHint" />
   if (lines.length) {
     return (
-      <div ref={boxRef} style={{ ...wrap, overflow: 'auto' }}>
-        {lines.map((line, i) => (
-          <button
-            key={i} type="button"
-            ref={(el) => { rowRefs.current[i] = el }}
-            onClick={() => onSeek(line.time)}
-            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 10, border: 0, background: i === active ? 'var(--surface)' : 'transparent', color: i === active ? 'var(--txt)' : 'var(--txt-2)', fontWeight: i === active ? 750 : 500, fontSize: 15, lineHeight: 1.4 }}
-          >{line.text}</button>
-        ))}
+      <div style={{ ...wrap, height: '46vh' }}>
+        <div className="lyr-off" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '2px 4px 6px' }}>
+          <button type="button" className="lyr-nudge" aria-label="lyrics -0,5s" onClick={() => nudge(-500)}>−</button>
+          <span className="lyr-off-v" style={{ fontSize: 12, color: 'var(--txt-2)', minWidth: 46, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{(offset / 1000).toFixed(1).replace('.', ',')} s</span>
+          <button type="button" className="lyr-nudge" aria-label="lyrics +0,5s" onClick={() => nudge(500)}>+</button>
+        </div>
+        <div ref={boxRef} style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          {lines.map((line, i) => (
+            <button
+              key={i} type="button"
+              ref={(el) => { rowRefs.current[i] = el }}
+              onClick={() => onSeek(line.time)}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 10, border: 0, background: i === active ? 'var(--surface)' : 'transparent', color: i === active ? 'var(--txt)' : 'var(--txt-2)', fontWeight: i === active ? 750 : 500, fontSize: 15, lineHeight: 1.4 }}
+            >{line.text}</button>
+          ))}
+        </div>
       </div>
     )
   }
